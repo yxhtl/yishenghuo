@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f4ede0">
+  <meta name="description" content="宜生活 — AI 现代黄历，每天给你看得懂、用得上的个性化生活建议">
+  <title>宜生活 · AI 现代黄历</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+</head>
+<body>
+
+  <!-- ========== 引导页 ========== -->
+  <div id="view-onboarding" class="view" style="display:none;">
+    <!-- 欢迎页 -->
+    <div id="onboard-welcome" class="onboard-screen">
+      <div class="onboard-logo">🏮</div>
+      <h1 class="onboard-title">宜生活</h1>
+      <p class="onboard-subtitle">你的 AI 现代黄历<br>每一天，都宜点什么</p>
+      <button class="btn-primary" onclick="startOnboarding()">开始使用</button>
+      <p class="onboard-social-proof">已有 <span id="user-count">1,247</span> 人今天查了黄历</p>
+    </div>
+
+    <!-- 问题1 -->
+    <div id="onboard-q1" class="onboard-screen" style="display:none;">
+      <div class="onboard-progress">壹 / 叁</div>
+      <h2 class="onboard-question">最近最在意什么？</h2>
+      <p class="onboard-hint">可多选</p>
+      <div class="option-list" id="q1-options">
+        <div class="option-item" data-value="健康" onclick="toggleOption(this)">健康 / 运动</div>
+        <div class="option-item" data-value="工作效率" onclick="toggleOption(this)">工作效率</div>
+        <div class="option-item" data-value="家人关系" onclick="toggleOption(this)">家人关系</div>
+        <div class="option-item" data-value="学习成长" onclick="toggleOption(this)">学习成长</div>
+        <div class="option-item" data-value="情绪状态" onclick="toggleOption(this)">情绪状态</div>
+        <div class="option-item" data-value="花钱习惯" onclick="toggleOption(this)">花钱习惯</div>
+      </div>
+      <button class="btn-primary" onclick="nextQuestion(1)">下一题</button>
+    </div>
+
+    <!-- 问题2 -->
+    <div id="onboard-q2" class="onboard-screen" style="display:none;">
+      <div class="onboard-progress">贰 / 叁</div>
+      <h2 class="onboard-question">你是个早起型还是夜猫子？</h2>
+      <div class="option-list">
+        <div class="option-item" data-value="早起鸟" onclick="selectSingle(this, 'q2')">早起鸟</div>
+        <div class="option-item" data-value="夜猫子" onclick="selectSingle(this, 'q2')">夜猫子</div>
+        <div class="option-item" data-value="看心情" onclick="selectSingle(this, 'q2')">看心情</div>
+      </div>
+      <button class="btn-primary" onclick="nextQuestion(2)">下一题</button>
+    </div>
+
+    <!-- 问题3 -->
+    <div id="onboard-q3" class="onboard-screen" style="display:none;">
+      <div class="onboard-progress">叁 / 叁</div>
+      <h2 class="onboard-question">有什么 AI 应该提醒你的事？</h2>
+      <p class="onboard-hint">选填，比如"少喝奶茶""多给爸妈打电话"</p>
+      <textarea id="q3-input" class="text-input" placeholder="比如：别熬夜刷手机…" rows="3"></textarea>
+      <button class="btn-primary" onclick="finishOnboarding()">生成我的黄历</button>
+    </div>
+
+    <!-- 生成中 -->
+    <div id="onboard-loading" class="onboard-screen" style="display:none;">
+      <div class="loading-ink"></div>
+      <p class="loading-text">正在为你翻今日黄历…</p>
+    </div>
+  </div>
+
+  <!-- ========== 主页 ========== -->
+  <div id="view-home" class="view" style="display:none;">
+    <header class="home-header">
+      <button class="header-btn" onclick="goSettings()">☰</button>
+      <span class="header-title">宜生活</span>
+      <button class="header-btn" onclick="refreshHuangli()">↻</button>
+    </header>
+
+    <!-- 日期 + 节气 -->
+    <div class="date-bar">
+      <div class="date-lunar" id="date-lunar">—</div>
+      <div class="date-solar" id="date-solar">—</div>
+    </div>
+    <div class="solar-term-bar" id="solar-term-bar" style="display:none;">
+      <span class="solar-term-tag" id="solar-term-text">—</span>
+    </div>
+
+    <!-- 运势签 -->
+    <div class="fortune-card" id="fortune-card">
+      <div class="fortune-label">今日运势</div>
+      <div class="fortune-grade" id="fortune-grade">—</div>
+      <div class="fortune-desc" id="fortune-desc">—</div>
+    </div>
+
+    <!-- 宜/忌卡片 -->
+    <div id="huangli-list" class="huangli-list">
+      <!-- 由 JS 动态渲染 -->
+    </div>
+
+    <!-- 每日一言 -->
+    <div class="quote-card" id="quote-card">
+      <div class="quote-text" id="quote-text">—</div>
+      <div class="quote-author" id="quote-author">—</div>
+    </div>
+
+    <!-- 心情记录 -->
+    <div class="mood-card">
+      <div class="mood-title">今日心情</div>
+      <div class="mood-options" id="mood-options">
+        <button class="mood-btn" data-mood="great" onclick="selectMood('great')">😊<div class="mood-label">很好</div></button>
+        <button class="mood-btn" data-mood="good" onclick="selectMood('good')">🙂<div class="mood-label">不错</div></button>
+        <button class="mood-btn" data-mood="ok" onclick="selectMood('ok')">😐<div class="mood-label">一般</div></button>
+        <button class="mood-btn" data-mood="bad" onclick="selectMood('bad')">😕<div class="mood-label">不太好</div></button>
+        <button class="mood-btn" data-mood="terrible" onclick="selectMood('terrible')">😢<div class="mood-label">糟糕</div></button>
+      </div>
+      <textarea class="mood-note" id="mood-note" placeholder="今天有什么想说的？（选填）" rows="2" onblur="saveMoodNote()"></textarea>
+    </div>
+
+    <!-- 连续打卡 -->
+    <div class="streak-bar">
+      <div class="streak-item">
+        <div class="streak-num" id="streak-days">0</div>
+        <div class="streak-label">连续打卡</div>
+      </div>
+      <div class="streak-item">
+        <div class="streak-num" id="streak-total">0</div>
+        <div class="streak-label">累计宜了</div>
+      </div>
+      <div class="streak-item">
+        <div class="streak-num" id="streak-rate">0%</div>
+        <div class="streak-label">完成率</div>
+      </div>
+    </div>
+
+    <!-- 日历历史 -->
+    <div class="history-card">
+      <div class="history-header">
+        <span class="history-title">近七日</span>
+        <button class="history-more" onclick="showFullHistory()">查看详情 ›</button>
+      </div>
+      <div class="history-days" id="history-days">
+        <!-- 由 JS 动态渲染 -->
+      </div>
+    </div>
+
+    <div class="home-footer">
+      <button class="btn-share" onclick="shareHuangli()">
+        📤 分享我的今日黄历
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== 设置页 ========== -->
+  <div id="view-settings" class="view" style="display:none;">
+    <header class="home-header">
+      <button class="header-btn" onclick="goHome()">←</button>
+      <span class="header-title">设置</span>
+      <span class="header-btn"></span>
+    </header>
+
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-section-title">生活档案</div>
+        <div class="settings-card" id="profile-display"></div>
+        <button class="btn-text" onclick="editProfile()">[ 编辑档案 ]</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">本月记录</div>
+        <div class="settings-card" id="stats-display"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">添加到桌面</div>
+        <div class="settings-card">
+          <p class="settings-desc">添加到手机桌面，像 App 一样每天打开</p>
+          <button class="btn-text" id="install-btn" onclick="installPWA()" style="display:none;">[ 添加到桌面 ]</button>
+          <p class="settings-desc" id="install-tip">在浏览器菜单中选择"添加到主屏幕"</p>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <button class="btn-text btn-danger" onclick="resetData()">[ 重置所有数据 ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 编辑档案弹窗 ========== -->
+  <div id="modal-edit" class="modal" style="display:none;">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <h3>编辑生活档案</h3>
+      <label class="modal-label">在意的事（逗号分隔）</label>
+      <input type="text" id="edit-goals" class="text-input" placeholder="健康, 家人关系">
+      <label class="modal-label">作息类型</label>
+      <input type="text" id="edit-sleep" class="text-input" placeholder="早起鸟 / 夜猫子 / 看心情">
+      <label class="modal-label">想被提醒的事</label>
+      <textarea id="edit-reminders" class="text-input" rows="3" placeholder="比如：少喝奶茶、别熬夜"></textarea>
+      <div class="modal-btns">
+        <button class="btn-text" onclick="closeModal()">取消</button>
+        <button class="btn-primary" onclick="saveProfile()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 分享图片预览 ========== -->
+  <div id="modal-share" class="modal" style="display:none;">
+    <div class="modal-overlay" onclick="closeShareModal()"></div>
+    <div class="modal-content modal-share-content">
+      <h3>分享我的今日黄历</h3>
+      <div id="share-preview" class="share-preview"></div>
+      <p class="share-tip">长按图片保存，或截图分享到朋友圈</p>
+      <div class="modal-btns">
+        <button class="btn-text" onclick="closeShareModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 历史详情弹窗 ========== -->
+  <div id="modal-history" class="modal" style="display:none;">
+    <div class="modal-overlay" onclick="closeHistoryModal()"></div>
+    <div class="modal-content">
+      <h3>历史黄历</h3>
+      <div id="history-detail" class="history-detail"></div>
+      <div class="modal-btns">
+        <button class="btn-text" onclick="closeHistoryModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Toast 提示 ========== -->
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

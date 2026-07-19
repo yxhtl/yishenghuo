@@ -1,0 +1,19 @@
+{
+  "name": "宜生活 — AI 现代黄历",
+  "short_name": "宜生活",
+  "description": "每天给你看得懂、用得上的个性化生活建议",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f0e6",
+  "theme_color": "#f5f0e6",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "yishenghuo",
+  "version": "0.1.0",
+  "description": "宜生活 — AI 现代黄历，每天给你看得懂、用得上的个性化生活建议",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "npx vercel dev",
+    "deploy": "npx vercel --prod"
+  }
+}
