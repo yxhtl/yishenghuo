@@ -1,5 +1,7 @@
 /* ===== 字体引入 ===== */
-@import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap');
+/* 使用国内镜像 fonts.loli.net 替代 fonts.googleapis.com，解决国内加载慢的问题 */
+/* Service Worker 会自动缓存字体文件，首次加载后离线可用 */
+@import url('https://fonts.loli.net/css2?family=Ma+Shan+Zheng&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap');
 
 /* ===== 全局变量 ===== */
 :root {
@@ -901,6 +903,17 @@ body::before {
   box-shadow: var(--shadow-card);
   margin-bottom: 8px;
   backdrop-filter: blur(6px);
+}
+
+.backup-btns {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-btns .btn-text {
+  font-size: 15px;
 }
 
 .settings-card p {

@@ -2,15 +2,25 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f4ede0">
   <meta name="description" content="宜生活 — AI 现代黄历，每天给你看得懂、用得上的个性化生活建议">
+
+  <!-- Open Graph：微信/朋友圈/推特分享时显示预览卡片 -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="宜生活 · AI 现代黄历">
+  <meta property="og:description" content="每天给你看得懂、用得上的个性化生活建议。保留传统黄历的宜/忌形式，内容真正贴合你的生活。">
+  <meta property="og:image" content="/icon.svg">
+  <meta property="og:locale" content="zh_CN">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="宜生活 · AI 现代黄历">
+  <meta name="twitter:description" content="每天给你看得懂、用得上的个性化生活建议。">
   <title>宜生活 · AI 现代黄历</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
   <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+  <script src="js/lib/lunar.js"></script>
 </head>
 <body>
 
@@ -22,7 +32,7 @@
       <h1 class="onboard-title">宜生活</h1>
       <p class="onboard-subtitle">你的 AI 现代黄历<br>每一天，都宜点什么</p>
       <button class="btn-primary" onclick="startOnboarding()">开始使用</button>
-      <p class="onboard-social-proof">已有 <span id="user-count">1,247</span> 人今天查了黄历</p>
+      <button class="btn-text" onclick="previewDemo()" style="margin-top:8px;">先看看效果 ›</button>
     </div>
 
     <!-- 问题1 -->
@@ -177,6 +187,18 @@
           <p class="settings-desc">添加到手机桌面，像 App 一样每天打开</p>
           <button class="btn-text" id="install-btn" onclick="installPWA()" style="display:none;">[ 添加到桌面 ]</button>
           <p class="settings-desc" id="install-tip">在浏览器菜单中选择"添加到主屏幕"</p>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">我的数据</div>
+        <div class="settings-card">
+          <p class="settings-desc">导出你的档案和历史记录到本地文件，换设备或清理浏览器时可导入恢复</p>
+          <div class="backup-btns">
+            <button class="btn-text" onclick="doExportData()">[ 导出数据 ]</button>
+            <button class="btn-text" onclick="document.getElementById('import-file-input').click()">[ 导入数据 ]</button>
+            <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;" onchange="doImportData(event)">
+          </div>
         </div>
       </div>
 

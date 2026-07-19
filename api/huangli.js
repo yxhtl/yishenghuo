@@ -4,9 +4,64 @@
  *
  * 环境变量：DEEPSEEK_API_KEY
  * 在 Vercel 项目设置 → Environment Variables 中配置
+ *
+ * 内置基于 IP 的频率限制：同一 IP 每天最多 10 次请求
  */
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+/* ===== 频率限制（基于 IP 的内存限流）===== */
+const RATE_LIMIT_MAX = 10;              // 每个 IP 每天最多请求次数
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 小时窗口（毫秒）
+
+// Map<ip, { count, firstTime }>
+const ipRequestMap = new Map();
+
+function getClientIP(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.headers['x-real-ip'] || req.connection?.remoteAddress || 'unknown';
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const record = ipRequestMap.get(ip);
+
+  // 窗口过期 → 重置
+  if (record && now - record.firstTime > RATE_LIMIT_WINDOW) {
+    ipRequestMap.delete(ip);
+  }
+
+  const current = ipRequestMap.get(ip);
+
+  if (!current) {
+    ipRequestMap.set(ip, { count: 1, firstTime: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+
+  if (current.count >= RATE_LIMIT_MAX) {
+    const resetAt = new Date(current.firstTime + RATE_LIMIT_WINDOW);
+    return { allowed: false, remaining: 0, resetAt };
+  }
+
+  current.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - current.count };
+}
+
+// 定期清理过期记录，防止内存泄漏（每次调用时触发轻量清理）
+let lastCleanup = Date.now();
+function maybeCleanup() {
+  const now = Date.now();
+  if (now - lastCleanup < 10 * 60 * 1000) return; // 每 10 分钟最多清理一次
+  lastCleanup = now;
+  for (const [ip, record] of ipRequestMap) {
+    if (now - record.firstTime > RATE_LIMIT_WINDOW) {
+      ipRequestMap.delete(ip);
+    }
+  }
+}
 
 const SYSTEM_PROMPT = `你是一个现代生活黄历的生成器。
 你的任务是根据用户的个人档案，生成今日的"宜/忌"建议。
@@ -83,6 +138,23 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // 频率限制检查
+  maybeCleanup();
+  const clientIP = getClientIP(req);
+  const rateLimitResult = checkRateLimit(clientIP);
+
+  // 设置限流响应头，方便前端提示
+  res.setHeader('X-RateLimit-Limit', RATE_LIMIT_MAX);
+  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining);
+
+  if (!rateLimitResult.allowed) {
+    console.warn(`[宜生活] IP ${clientIP} 触发限流`);
+    return res.status(429).json({
+      error: '今日请求次数已达上限，请明天再试',
+      resetAt: rateLimitResult.resetAt
+    });
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;

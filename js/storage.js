@@ -189,3 +189,82 @@ function getRecentDays(count) {
 function resetAllData() {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+/* ===== 数据导出 / 导入 ===== */
+
+/**
+ * 导出全部数据为 JSON 字符串
+ * 包含 profile / huangli / moods / checkins
+ */
+function exportDataString() {
+  const data = getData();
+  const exportObj = {
+    app: 'yishenghuo',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: data
+  };
+  return JSON.stringify(exportObj, null, 2);
+}
+
+/**
+ * 触发浏览器下载，导出 .json 文件
+ */
+function exportToFile() {
+  const jsonStr = exportDataString();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const filename = `yishenghuo-backup-${y}${m}${d}.json`;
+
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * 从 JSON 字符串导入数据
+ * @param {string} jsonStr
+ * @returns {{ success: boolean, message: string, merged?: object }}
+ */
+function importDataString(jsonStr) {
+  try {
+    const parsed = JSON.parse(jsonStr);
+
+    // 兼容两种格式：带 app 包装的 / 纯数据对象
+    let importedData;
+    if (parsed.app === 'yishenghuo' && parsed.data) {
+      importedData = parsed.data;
+    } else if (parsed.profile !== undefined || parsed.huangli !== undefined) {
+      importedData = parsed;
+    } else {
+      return { success: false, message: '文件格式不正确，不是宜生活的备份文件' };
+    }
+
+    // 合并导入：以导入数据覆盖本地同日期记录，本地独有的记录保留
+    const local = getData();
+    const merged = {
+      profile: importedData.profile || local.profile,
+      huangli: { ...local.huangli, ...(importedData.huangli || {}) },
+      moods: { ...local.moods, ...(importedData.moods || {}) },
+      checkins: { ...local.checkins, ...(importedData.checkins || {}) }
+    };
+
+    saveData(merged);
+
+    return {
+      success: true,
+      message: '数据导入成功',
+      merged
+    };
+  } catch (e) {
+    return { success: false, message: '文件解析失败：' + e.message };
+  }
+}

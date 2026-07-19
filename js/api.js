@@ -4,16 +4,94 @@
  * API 不可用时使用本地 mock 数据
  */
 
+/* ===== 客户端频率限制 ===== */
+const CLIENT_DAILY_LIMIT = 5; // 每天最多主动请求 5 次
+const RATE_LIMIT_KEY = 'yishenghuo_api_count';
+
+/**
+ * 获取今天的日期 key（如 "2026-07-19"）
+ */
+function getTodayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 检查今天还能否调用 API
+ * @returns {{ allowed: boolean, used: number, remaining: number }}
+ */
+function checkClientRateLimit() {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY);
+    const today = getTodayKey();
+    if (!raw) {
+      return { allowed: true, used: 0, remaining: CLIENT_DAILY_LIMIT };
+    }
+    const data = JSON.parse(raw);
+    if (data.date !== today) {
+      // 新的一天，重置
+      return { allowed: true, used: 0, remaining: CLIENT_DAILY_LIMIT };
+    }
+    const remaining = CLIENT_DAILY_LIMIT - data.count;
+    return { allowed: remaining > 0, used: data.count, remaining };
+  } catch {
+    return { allowed: true, used: 0, remaining: CLIENT_DAILY_LIMIT };
+  }
+}
+
+/**
+ * 记录一次 API 调用
+ */
+function incrementClientCount() {
+  try {
+    const today = getTodayKey();
+    const raw = localStorage.getItem(RATE_LIMIT_KEY);
+    let count = 0;
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.date === today) count = data.count;
+    }
+    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify({ date: today, count: count + 1 }));
+  } catch {
+    // localStorage 不可用时静默失败
+  }
+}
+
 /**
  * 获取今日黄历（含运势、每日一言）
  */
 async function fetchHuangli(profile) {
+  // 客户端限流：超过当日上限直接用 Mock 数据
+  const limit = checkClientRateLimit();
+  if (!limit.allowed) {
+    console.info(`[宜生活] 今日 API 调用已达上限（${CLIENT_DAILY_LIMIT} 次），使用本地数据`);
+    const mock = getMockHuangli(profile);
+    return {
+      ...mock,
+      fortune: getMockFortune(),
+      quote: getMockQuote(),
+      _source: 'mock_rate_limited'
+    };
+  }
+
   try {
     const resp = await fetch('/api/huangli', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ profile })
     });
+
+    // 服务端限流：429
+    if (resp.status === 429) {
+      console.info('[宜生活] 服务端限流，使用本地数据');
+      const mock = getMockHuangli(profile);
+      return {
+        ...mock,
+        fortune: getMockFortune(),
+        quote: getMockQuote(),
+        _source: 'mock_rate_limited'
+      };
+    }
 
     if (!resp.ok) throw new Error(`API ${resp.status}`);
 
@@ -22,6 +100,9 @@ async function fetchHuangli(profile) {
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
       throw new Error('返回数据格式异常');
     }
+
+    // 成功调用，计数 +1
+    incrementClientCount();
 
     return {
       lunar: data.lunar || getLunarDate(),
@@ -33,7 +114,8 @@ async function fetchHuangli(profile) {
         status: null
       })),
       fortune: data.fortune || getMockFortune(),
-      quote: data.quote || getMockQuote()
+      quote: data.quote || getMockQuote(),
+      _source: 'ai'
     };
   } catch (err) {
     console.warn('[宜生活] API 调用失败，使用本地数据:', err.message);
@@ -41,7 +123,8 @@ async function fetchHuangli(profile) {
     return {
       ...mock,
       fortune: getMockFortune(),
-      quote: getMockQuote()
+      quote: getMockQuote(),
+      _source: 'mock_error'
     };
   }
 }

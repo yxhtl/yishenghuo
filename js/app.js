@@ -60,6 +60,33 @@ function startOnboarding() {
   showOnboardScreen('onboard-q1');
 }
 
+/**
+ * 评委/新用户快速预览：用预设档案直接生成黄历，跳过引导流程
+ * 不保存档案，返回设置页时可重新设置
+ */
+async function previewDemo() {
+  const demoProfile = {
+    goals: ['健康', '工作效率', '情绪状态'],
+    sleepType: '看心情',
+    customReminders: '少喝奶茶、别熬夜刷手机',
+    createdAt: getTodayKey(),
+    _isDemo: true
+  };
+
+  saveProfileData(demoProfile);
+
+  showView('view-onboarding');
+  showOnboardScreen('onboard-loading');
+
+  const huangli = await fetchHuangli(demoProfile);
+  saveHuangliData(getTodayKey(), huangli);
+
+  renderHome(huangli);
+  showView('view-home');
+  showDataSourceToast(huangli);
+  showToast('这是演示效果，可在设置中修改档案');
+}
+
 function toggleOption(el) {
   el.classList.toggle('selected');
 }
@@ -112,6 +139,7 @@ async function finishOnboarding() {
 
   renderHome(huangli);
   showView('view-home');
+  showDataSourceToast(huangli);
 }
 
 /* ===== 主页 ===== */
@@ -134,6 +162,9 @@ async function loadHome() {
   }
 
   renderHome(huangli);
+  if (huangli._source && huangli._source !== 'ai') {
+    showDataSourceToast(huangli);
+  }
 }
 
 function renderHome(huangli) {
@@ -278,7 +309,7 @@ async function refreshHuangli() {
   const huangli = await fetchHuangli(profile);
   saveHuangliData(todayKey, huangli);
   renderHome(huangli);
-  showToast('已更新今日黄历');
+  showDataSourceToast(huangli, '已更新今日黄历');
 }
 
 /* ===== 每日一言 ===== */
@@ -589,7 +620,61 @@ function resetData() {
   }
 }
 
+/* ===== 数据导出 / 导入 ===== */
+function doExportData() {
+  const profile = getProfile();
+  if (!profile) {
+    showToast('还没有数据可导出');
+    return;
+  }
+  try {
+    exportToFile();
+    showToast('数据已导出 📄');
+  } catch (e) {
+    showToast('导出失败：' + e.message);
+  }
+}
+
+function doImportData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const jsonStr = e.target.result;
+    const result = importDataString(jsonStr);
+    if (result.success) {
+      showToast(result.message);
+      // 刷新设置页显示 + 回到首页重新加载
+      renderSettings();
+      setTimeout(() => {
+        loadHome();
+      }, 800);
+    } else {
+      showToast(result.message);
+    }
+    // 清空 input，使同一文件可重复选择
+    event.target.value = '';
+  };
+  reader.onerror = function() {
+    showToast('文件读取失败');
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
 /* ===== 工具函数 ===== */
+function showDataSourceToast(huangli, defaultMsg) {
+  const source = huangli._source;
+  if (source === 'ai') {
+    if (defaultMsg) showToast(defaultMsg);
+  } else if (source === 'mock_rate_limited') {
+    showToast('今日 AI 生成次数已用完，当前显示本地建议');
+  } else if (source === 'mock_error') {
+    showToast('AI 暂时不可用，当前显示本地建议');
+  }
+}
+
 function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;

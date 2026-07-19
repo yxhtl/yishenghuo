@@ -2,11 +2,13 @@
  * Service Worker — PWA 离线缓存
  */
 
-const CACHE_NAME = 'yishenghuo-v1';
+const CACHE_NAME = 'yishenghuo-v3';
+const FONT_CACHE_NAME = 'yishenghuo-fonts-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
+  '/js/lib/lunar.js',
   '/js/storage.js',
   '/js/api.js',
   '/js/share.js',
@@ -28,7 +30,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        keys.filter(key => key !== CACHE_NAME && key !== FONT_CACHE_NAME).map(key => caches.delete(key))
       )
     )
   );
@@ -41,6 +43,25 @@ self.addEventListener('fetch', (event) => {
 
   // API 请求不走缓存
   if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // 字体文件（loli.net 镜像）：缓存优先，命中则直接返回，未命中才网络请求并缓存
+  // 字体文件不会变化，缓存优先策略可以避免重复下载
+  if (url.hostname === 'fonts.loli.net' || url.hostname === 'gstatic.loli.net') {
+    event.respondWith(
+      caches.open(FONT_CACHE_NAME).then(cache =>
+        cache.match(event.request).then(cached => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
+            if (response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => cached);
+        })
+      )
+    );
     return;
   }
 

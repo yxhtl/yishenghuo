@@ -4,6 +4,19 @@
  */
 
 async function generateShareImage(huangli) {
+  // 等待自定义字体加载完成，避免 Canvas 绘制时回退到默认字体
+  try {
+    await Promise.all([
+      document.fonts.load('bold 26px "Ma Shan Zheng"'),
+      document.fonts.load('bold 30px "Ma Shan Zheng"'),
+      document.fonts.load('14px "ZCOOL XiaoWei"'),
+      document.fonts.load('16px "Long Cang"')
+    ]);
+    await document.fonts.ready;
+  } catch (e) {
+    console.warn('[宜生活] 字体加载未完成，使用回退字体');
+  }
+
   const W = 380;
   const yiItems = (huangli.items || []).filter(i => i.type === 'yi');
   const jiItems = (huangli.items || []).filter(i => i.type === 'ji');
