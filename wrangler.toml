@@ -1,0 +1,7 @@
+# Cloudflare Pages 配置
+name = "yishenghuo"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "."
+
+# 环境变量在 Cloudflare Dashboard → Pages → 项目 → Settings → Environment variables 中配置
+# 本地开发时使用 .env 文件（wrangler pages dev 会自动读取）

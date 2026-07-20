@@ -7,32 +7,32 @@
 
 - **项目名称**：宜生活 — AI 现代黄历
 - **项目路径**：`yishenghuo/`
-- **技术栈**：原生 HTML/CSS/JS + Vercel Serverless + DeepSeek API + Open-Meteo 天气 API + localStorage
-- **部署平台**：Vercel
+- **技术栈**：原生 HTML/CSS/JS + Cloudflare Pages Functions + DeepSeek API + Open-Meteo 天气 + localStorage
+- **部署平台**：Cloudflare Pages（免费、不需要备案、国内访问友好）
 
 ## 当前文件结构
 
 ```
 yishenghuo/
-├── index.html          # 主页面（引导页 + 主页 + 设置页 + 弹窗）
-├── css/style.css       # 中式视觉样式
+├── index.html              # 主页面（引导页 + 主页 + 设置页 + 弹窗）
+├── css/style.css           # 中式视觉样式
 ├── js/
-│   ├── storage.js      # localStorage 数据管理（档案/黄历/心情/打卡/断签保护/每周回顾/导入导出）
-│   ├── weather.js      # 天气模块（浏览器定位 + Open-Meteo API + 缓存）
-│   ├── api.js          # API 调用 + Mock 兜底（含天气上下文）
-│   ├── share.js        # Canvas 分享图片生成（含天气信息）
-│   ├── app.js          # 主逻辑（视图/引导/渲染/天气/场景模板）
-│   └── lib/lunar.js    # 农历库
-├── api/
-│   ├── huangli.js      # Serverless Function（调 DeepSeek，含天气+近况上下文）
-│   └── weather.js     # Serverless Function（IP 定位兜底，返回经纬度）
-├── manifest.json       # PWA 配置
-├── sw.js               # Service Worker（v6 缓存）
-├── icon.svg            # 应用图标
-├── vercel.json         # Vercel 部署配置
-├── package.json
-├── .env                # 环境变量（DEEPSEEK_API_KEY，当前为空）
-└── .gitignore
+│   ├── storage.js          # localStorage 数据管理（档案/黄历/心情/打卡/断签/回顾/导入导出）
+│   ├── weather.js          # 天气模块（浏览器定位 + Open-Meteo + 缓存）
+│   ├── api.js              # API 调用 + Mock 兜底（含天气上下文）
+│   ├── share.js            # Canvas 分享图片生成（含天气信息）
+│   ├── app.js              # 主逻辑（视图/引导/渲染/天气/场景模板）
+│   └── lib/lunar.js        # 农历库
+├── functions/
+│   └── api/
+│       ├── huangli.js      # Cloudflare Pages Function（调 DeepSeek，含天气+近况）
+│       └── weather.js      # Cloudflare Pages Function（IP 定位兜底，用 request.cf）
+├── manifest.json           # PWA 配置
+├── sw.js                   # Service Worker（v6 缓存）
+├── icon.svg                # 应用图标
+├── wrangler.toml           # Cloudflare 配置
+├── package.json            # npm scripts（wrangler dev/deploy）
+└── .env                    # 本地环境变量（DEEPSEEK_API_KEY）
 ```
 
 ## 已完成的功能
@@ -42,59 +42,67 @@ yishenghuo/
 3. ✅ localStorage 数据存储（客户端存储，数据不离开浏览器）
 4. ✅ Canvas 分享图片生成（含天气信息）
 5. ✅ PWA 支持（manifest + service worker v6）
-6. ✅ Vercel 部署配置
-7. ✅ 连续打卡保护 / 断签容错（每月 2 次免死，`storage.js` 中 `tryUseFreeze`）
-8. ✅ 每周回顾功能（周一至今的心情趋势 + 完成统计，`getWeeklyReview` + `renderWeeklyReview`）
-9. ✅ 数据导出/导入（JSON 备份 + 合并导入，`exportToFile` + `importDataString`）
-10. ✅ 天气 API 集成（Open-Meteo 免费 API + 浏览器定位 + Vercel IP 定位兜底）
-11. ✅ 天气纳入 AI 建议（prompt 中注入天气信息，让建议更贴合天气）
-12. ✅ 场景模板快选（考研党 / 新手爸妈 / 减脂人群 / 职场新人 / 自由职业）
-13. ✅ 分享图片优化（字体加载 3 秒超时保护，避免卡死）
+6. ✅ 连续打卡保护 / 断签容错（每月 2 次免死）
+7. ✅ 每周回顾功能（心情趋势 + 完成统计）
+8. ✅ 数据导出/导入（JSON 备份 + 合并导入）
+9. ✅ 天气 API 集成（Open-Meteo 免费 + 浏览器定位 + Cloudflare IP 定位兜底）
+10. ✅ 天气纳入 AI 建议（prompt 注入天气信息）
+11. ✅ 场景模板快选（考研党 / 新手爸妈 / 减脂 / 职场新人 / 自由职业）
+12. ✅ 分享图片优化（字体加载 3 秒超时保护）
+13. ✅ **从 Vercel 迁移到 Cloudflare Pages**
+    - `functions/api/` 替代 `api/`（Cloudflare Pages Functions 格式）
+    - `request.cf` 对象替代 Vercel IP 头（地理定位更简洁）
+    - `wrangler.toml` 替代 `vercel.json`
+    - `npx wrangler pages dev/deploy` 替代 `vercel dev/deploy`
 
 ## 待办 / 进行中
 
-- [ ] **部署上线**：需要在 Vercel 项目设置中配置 `DEEPSEEK_API_KEY` 环境变量，然后 `vercel --prod`
+- [ ] **部署上线**：在 Cloudflare Pages 创建项目，配置 `DEEPSEEK_API_KEY` 环境变量
 - [ ] 天气定位授权引导优化（首次拒绝后不重复弹窗）
-- [ ] 周报/月报功能（跨周回顾趋势）
-- [ ] 更多场景模板（备考季、换工作、异地恋…）
+- [ ] 周报/月报功能
+- [ ] 更多场景模板
 - [ ] 社区分享与互动
+
+## 部署指南（Cloudflare Pages）
+
+### 本地开发
+```bash
+npx wrangler pages dev . --port 8788
+```
+打开 `http://localhost:8788`，`.env` 中的 `DEEPSEEK_API_KEY` 会被自动读取。
+
+### 部署
+**Git 自动部署（推荐）**：
+1. 推代码到 GitHub
+2. Cloudflare Dashboard → Pages → Connect to Git
+3. Build output directory: `.`（无需构建命令）
+4. Settings → Environment variables 添加 `DEEPSEEK_API_KEY`
+
+**命令行部署**：
+```bash
+npx wrangler pages deploy .
+```
 
 ## 关键概念说明
 
 ### 客户端 vs 服务端
-- **客户端（浏览器）**：`js/` 目录下的所有文件，在用户浏览器中运行。localStorage 数据存储在用户本地，不会上传到服务器。
-- **服务端（Vercel）**：`api/` 目录下两个 Serverless Function：
+- **客户端（浏览器）**：`js/` 下所有文件，localStorage 数据存在用户本地
+- **服务端（Cloudflare）**：`functions/api/` 下两个 Pages Function：
   - `huangli.js` — 调用 DeepSeek API 生成 AI 建议，接收天气+近况上下文
-  - `weather.js` — 利用 Vercel 自带的 IP 定位头（`x-vercel-ip-latitude`）返回经纬度，兜底浏览器定位失败的场景
-- 用户的 API Key 保存在服务端环境变量中，前端看不到。
+  - `weather.js` — 利用 Cloudflare `request.cf` 对象返回 IP 定位的经纬度
+- API Key 在 Cloudflare 环境变量中，前端看不到
 
-### 天气 API 架构
-1. **数据源**：[Open-Meteo](https://open-meteo.com/)（免费、无需 API Key、支持 CORS）
-2. **定位策略**（双保险）：
-   - 优先：浏览器 `navigator.geolocation`（精确到街道，需用户授权）
-   - 兜底：`api/weather.js` 通过 Vercel IP 定位头获取经纬度（城市级，无需授权）
-3. **缓存**：localStorage 缓存天气 3 小时（同一天内有效）
-4. **降级**：天气获取失败不影响核心功能，AI 建议 prompt 中不含天气字段
-
-### 场景模板
-在引导页欢迎屏幕底部提供 5 个身份模板 chip，点击直接创建预设档案并生成黄历：
-- 📚 考研党：学习成长 / 工作效率 / 情绪状态，夜猫子
-- 👶 新手爸妈：家人关系 / 健康 / 情绪状态，看心情
-- 💪 减脂人群：健康 / 情绪状态，早起鸟
-- 💼 职场新人：工作效率 / 学习成长 / 情绪状态，早起鸟
-- 🎧 自由职业：工作效率 / 健康 / 情绪状态，看心情
-
-### 数据导出
-- 数据存储在浏览器 localStorage 中
-- 可以通过 `storage.js` 中的导出功能将数据导出为 JSON 文件
-- 数据完全在用户本地，不会上传到任何服务器
-
-## 部署状态
-
-- `.env` 文件中 `DEEPSEEK_API_KEY` 为空，需要填入
-- 部署命令：`vercel --prod`
-- 需要在 Vercel Dashboard 配置环境变量 `DEEPSEEK_API_KEY`
-- 天气 API 无需配置任何环境变量（Open-Meteo 免费 + Vercel 自带 IP 定位）
+### Cloudflare vs Vercel 迁移要点
+| 项目 | Vercel | Cloudflare Pages |
+|------|--------|-----------------|
+| 函数目录 | `api/` | `functions/api/` |
+| 函数格式 | `module.exports = async (req, res) => {}` | `export async function onRequestPost(context) {}` |
+| 请求对象 | Express-like `req` | Web API `context.request` |
+| 响应 | `res.json()` | `return new Response()` |
+| 环境变量 | `process.env.X` | `context.env.X` |
+| IP 地理 | `x-vercel-ip-latitude` 头 | `request.cf.latitude` |
+| 本地开发 | `vercel dev` | `wrangler pages dev` |
+| 部署 | `vercel --prod` | `wrangler pages deploy` |
 
 ## 如何恢复工作
 

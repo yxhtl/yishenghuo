@@ -1,35 +1,44 @@
 /**
- * api/huangli.js — Vercel Serverless Function
+ * functions/api/huangli.js — Cloudflare Pages Function
  * 接收用户档案，调用 DeepSeek API 生成个性化黄历
  *
  * 环境变量：DEEPSEEK_API_KEY
- * 在 Vercel 项目设置 → Environment Variables 中配置
+ * 在 Cloudflare Pages → Settings → Environment variables 中配置
  *
  * 内置基于 IP 的频率限制：同一 IP 每天最多 10 次请求
+ * （注意：CF Workers 的内存态在 isolate 间可能不共享，这是 best-effort 限流，
+ *  客户端也有限流作为主要防线）
  */
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
+/* ===== CORS 通用头 ===== */
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type'
+};
+
 /* ===== 频率限制（基于 IP 的内存限流）===== */
-const RATE_LIMIT_MAX = 10;              // 每个 IP 每天最多请求次数
-const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 小时窗口（毫秒）
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000;
 
 // Map<ip, { count, firstTime }>
 const ipRequestMap = new Map();
 
-function getClientIP(req) {
-  const forwarded = req.headers['x-forwarded-for'];
+function getClientIP(request) {
+  const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
     return forwarded.split(',')[0].trim();
   }
-  return req.headers['x-real-ip'] || req.connection?.remoteAddress || 'unknown';
+  // Cloudflare: request.cf 也有信息，但 IP 从 CF-Connecting-IP 头取
+  return request.headers.get('cf-connecting-ip') || 'unknown';
 }
 
 function checkRateLimit(ip) {
   const now = Date.now();
   const record = ipRequestMap.get(ip);
 
-  // 窗口过期 → 重置
   if (record && now - record.firstTime > RATE_LIMIT_WINDOW) {
     ipRequestMap.delete(ip);
   }
@@ -50,17 +59,27 @@ function checkRateLimit(ip) {
   return { allowed: true, remaining: RATE_LIMIT_MAX - current.count };
 }
 
-// 定期清理过期记录，防止内存泄漏（每次调用时触发轻量清理）
 let lastCleanup = Date.now();
 function maybeCleanup() {
   const now = Date.now();
-  if (now - lastCleanup < 10 * 60 * 1000) return; // 每 10 分钟最多清理一次
+  if (now - lastCleanup < 10 * 60 * 1000) return;
   lastCleanup = now;
   for (const [ip, record] of ipRequestMap) {
     if (now - record.firstTime > RATE_LIMIT_WINDOW) {
       ipRequestMap.delete(ip);
     }
   }
+}
+
+function jsonResponse(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      ...CORS_HEADERS,
+      ...extraHeaders
+    }
+  });
 }
 
 const SYSTEM_PROMPT = `你是一个现代生活黄历的生成器。
@@ -138,47 +157,52 @@ const SYSTEM_PROMPT = `你是一个现代生活黄历的生成器。
     - 热天提醒多喝水、少喝冷饮
     - 但不要生硬地提天气，要自然融入建议`;
 
-module.exports = async (req, res) => {
-  // CORS（本地调试用，同域部署不需要）
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+/* CORS 预检 */
+export function onRequestOptions() {
+  return new Response(null, { status: 200, headers: CORS_HEADERS });
+}
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+/* 主处理函数 */
+export async function onRequestPost(context) {
+  const { request, env } = context;
 
   // 频率限制检查
   maybeCleanup();
-  const clientIP = getClientIP(req);
+  const clientIP = getClientIP(request);
   const rateLimitResult = checkRateLimit(clientIP);
 
-  // 设置限流响应头，方便前端提示
-  res.setHeader('X-RateLimit-Limit', RATE_LIMIT_MAX);
-  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining);
+  const rateLimitHeaders = {
+    'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+    'X-RateLimit-Remaining': String(rateLimitResult.remaining)
+  };
 
   if (!rateLimitResult.allowed) {
     console.warn(`[宜生活] IP ${clientIP} 触发限流`);
-    return res.status(429).json({
-      error: '今日请求次数已达上限，请明天再试',
-      resetAt: rateLimitResult.resetAt
-    });
+    return jsonResponse(
+      { error: '今日请求次数已达上限，请明天再试', resetAt: rateLimitResult.resetAt },
+      429,
+      rateLimitHeaders
+    );
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = env.DEEPSEEK_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+    return jsonResponse({ error: 'DEEPSEEK_API_KEY not configured' }, 500, rateLimitHeaders);
   }
 
-  const { profile, recentContext, weather } = req.body || {};
+  // 解析请求体
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid JSON body' }, 400, rateLimitHeaders);
+  }
+
+  const { profile, recentContext, weather } = body || {};
 
   if (!profile) {
-    return res.status(400).json({ error: 'Profile is required' });
+    return jsonResponse({ error: 'Profile is required' }, 400, rateLimitHeaders);
   }
 
   const now = new Date();
@@ -242,14 +266,13 @@ ${recentContext}
 
     const parsed = JSON.parse(content);
 
-    // 校验
     if (!parsed.items || !Array.isArray(parsed.items)) {
       throw new Error('Invalid response format');
     }
 
-    return res.status(200).json(parsed);
+    return jsonResponse(parsed, 200, rateLimitHeaders);
   } catch (err) {
     console.error('[宜生活] huangli API error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return jsonResponse({ error: err.message }, 500, rateLimitHeaders);
   }
-};
+}
