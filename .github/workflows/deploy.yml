@@ -25,9 +25,14 @@ jobs:
           CLOUDFLARE_API_KEY: ${{ secrets.CF_API_KEY }}
           CLOUDFLARE_EMAIL: ${{ secrets.CF_EMAIL }}
 
+      - name: Set DEEPSEEK_API_KEY secret
+        run: echo "${{ secrets.DEEPSEEK_API_KEY }}" | npx wrangler pages secret put DEEPSEEK_API_KEY --project-name=yishenghuo
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CF_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CF_EMAIL }}
+
       - name: Deploy
         run: npx wrangler pages deploy . --project-name=yishenghuo
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CF_API_KEY }}
           CLOUDFLARE_EMAIL: ${{ secrets.CF_EMAIL }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
