@@ -2,7 +2,7 @@
  * Service Worker — PWA 离线缓存
  */
 
-const CACHE_NAME = 'yishenghuo-v4';
+const CACHE_NAME = 'yishenghuo-v5';
 const FONT_CACHE_NAME = 'yishenghuo-fonts-v1';
 const STATIC_ASSETS = [
   '/',
