@@ -23,20 +23,33 @@ async function generateShareImage(huangli) {
   const fortune = huangli.fortune;
   const quote = huangli.quote;
 
+  // 先创建 ctx 用于测量每日一言的实际换行行数
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  let quoteLines = 1;
+  if (quote && quote.text) {
+    ctx.font = '16px "Long Cang", "STXingkai", cursive';
+    quoteLines = countWrappedLines(ctx, quote.text, W - 100);
+  }
+
+  // 根据实际行数计算一言区域高度
+  // 结构：分割线间距24 + 标签20 + 首行偏移14 + (行数-1)*24行距 + 作者20 + 底部间距10
+  const quoteSectionHeight = quote ? (24 + 20 + 14 + (quoteLines - 1) * 24 + 20 + 10) : 0;
+
   let H = 80;
   H += 70;
   if (fortune) H += 70;
   H += yiItems.length * 32 + 50;
   H += jiItems.length * 32 + 50;
-  if (quote) H += 80;
+  if (quote) H += quoteSectionHeight;
   H += 60;
   H = Math.max(H, 480);
 
-  const dpr = window.devicePixelRatio || 1;
-  const canvas = document.createElement('canvas');
+  // 设置最终画布尺寸
   canvas.width = W * dpr;
   canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
   // 宣纸背景
@@ -162,7 +175,7 @@ async function generateShareImage(huangli) {
     ctx.font = '16px "Long Cang", "STXingkai", cursive';
     ctx.fillStyle = '#4a3f35';
     wrapText(ctx, quote.text, W / 2, y + 14, W - 100, 24);
-    y += quote.text.length > 14 ? 50 : 28;
+    y += 14 + quoteLines * 24;
 
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
@@ -249,4 +262,25 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   lines.forEach((l, i) => {
     ctx.fillText(l, x, y + i * lineHeight);
   });
+}
+
+/**
+ * 计算文本按 maxWidth 换行后的实际行数（不绘制，只测量）
+ */
+function countWrappedLines(ctx, text, maxWidth) {
+  const chars = text.split('');
+  let line = '';
+  let lines = 0;
+
+  for (let i = 0; i < chars.length; i++) {
+    const testLine = line + chars[i];
+    if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+      lines++;
+      line = chars[i];
+    } else {
+      line = testLine;
+    }
+  }
+  if (line) lines++;
+  return Math.max(1, lines);
 }
