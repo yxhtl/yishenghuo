@@ -78,7 +78,8 @@ async function previewDemo() {
   showView('view-onboarding');
   showOnboardScreen('onboard-loading');
 
-  const huangli = await fetchHuangli(demoProfile);
+  const recentContext = getRecentContextForAI(3);
+  const huangli = await fetchHuangli(demoProfile, recentContext);
   saveHuangliData(getTodayKey(), huangli);
 
   renderHome(huangli);
@@ -134,7 +135,8 @@ async function finishOnboarding() {
   showView('view-onboarding');
   showOnboardScreen('onboard-loading');
 
-  const huangli = await fetchHuangli(profile);
+  const recentContext = getRecentContextForAI(3);
+  const huangli = await fetchHuangli(profile, recentContext);
   saveHuangliData(getTodayKey(), huangli);
 
   renderHome(huangli);
@@ -157,7 +159,8 @@ async function loadHome() {
       </div>
     `;
     const profile = getProfile();
-    huangli = await fetchHuangli(profile);
+    const recentContext = getRecentContextForAI(3);
+    huangli = await fetchHuangli(profile, recentContext);
     saveHuangliData(todayKey, huangli);
   }
 
@@ -189,6 +192,9 @@ function renderHome(huangli) {
 
   // 打卡统计
   renderStreak();
+
+  // 每周回顾
+  renderWeeklyReview();
 
   // 历史
   renderHistory();
@@ -280,8 +286,9 @@ function markAction(index, action) {
     renderHuangliList(huangli);
   }
 
-  // 更新打卡统计和历史
+  // 更新打卡统计、回顾和历史
   renderStreak();
+  renderWeeklyReview();
   renderHistory();
 
   if (action === 'done') {
@@ -306,7 +313,8 @@ async function refreshHuangli() {
     </div>
   `;
 
-  const huangli = await fetchHuangli(profile);
+  const recentContext = getRecentContextForAI(3);
+  const huangli = await fetchHuangli(profile, recentContext);
   saveHuangliData(todayKey, huangli);
   renderHome(huangli);
   showDataSourceToast(huangli, '已更新今日黄历');
@@ -352,6 +360,7 @@ function selectMood(mood) {
   }
 
   saveMoodData(todayKey, newMood);
+  renderWeeklyReview();
 
   const labels = { great: '今天心情不错呢', good: '还不错的一天', ok: '平平淡淡也挺好', bad: '辛苦了，抱抱', terrible: '难熬的一天，明天会好的' };
   if (labels[mood]) showToast(labels[mood]);
@@ -373,6 +382,15 @@ function renderStreak() {
   document.getElementById('streak-days').textContent = streak;
   document.getElementById('streak-total').textContent = stats.doneYi;
   document.getElementById('streak-rate').textContent = rate + '%';
+
+  // 显示本月剩余免死次数
+  const now = new Date();
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const freezeRemaining = getFreezeRemaining(yearMonth);
+  const streakDaysEl = document.getElementById('streak-days');
+  if (streak > 0 && freezeRemaining > 0) {
+    streakDaysEl.title = `连续 ${streak} 天 · 本月还有 ${freezeRemaining} 次断签保护`;
+  }
 }
 
 /* ===== 日历历史 ===== */
@@ -455,6 +473,92 @@ function closeHistoryModal() {
 function showFullHistory() {
   // 直接展示今天的历史详情
   showHistoryDetail(getTodayKey());
+}
+
+/* ===== 每周回顾 ===== */
+function renderWeeklyReview() {
+  const review = getWeeklyReview();
+  const card = document.getElementById('review-card');
+
+  if (!review.hasData) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+
+  // 天数标签
+  document.getElementById('review-days-tag').textContent = `第 ${review.activeDays}/${review.totalDays} 天`;
+
+  // 主体内容
+  const body = document.getElementById('review-body');
+
+  const moodEmojis = { great: '😊', good: '🙂', ok: '😐', bad: '😕', terrible: '😢' };
+  const moodText = { great: '很好', good: '不错', ok: '一般', bad: '不太好', terrible: '糟糕' };
+
+  // 心情趋势
+  let moodHtml = '';
+  if (review.moodCount > 0) {
+    const moodAvg = review.moodAvg;
+    let moodDesc = '';
+    if (moodAvg >= 4) moodDesc = '这周整体心情不错';
+    else if (moodAvg >= 3) moodDesc = '这周心情起起伏伏';
+    else moodDesc = '这周有点辛苦，抱抱';
+
+    const moodDots = review.moodLabels.map(m => `<span class="mood-dot">${moodEmojis[m] || '😐'}</span>`).join('');
+
+    moodHtml = `
+      <div class="review-section">
+        <div class="review-section-label">心情趋势</div>
+        <div class="review-mood-row">${moodDots}</div>
+        <div class="review-mood-desc">${moodDesc}</div>
+      </div>
+    `;
+  }
+
+  // 完成情况
+  let actionHtml = '';
+  if (review.totalActions > 0) {
+    actionHtml = `
+      <div class="review-section">
+        <div class="review-section-label">完成情况</div>
+        <div class="review-stats-row">
+          <div class="review-stat">
+            <span class="review-stat-num">${review.doneYi}</span>
+            <span class="review-stat-desc">宜了</span>
+          </div>
+          <div class="review-stat">
+            <span class="review-stat-num">${review.keptJi}</span>
+            <span class="review-stat-desc">守住了</span>
+          </div>
+          <div class="review-stat">
+            <span class="review-stat-num">${review.totalActions}</span>
+            <span class="review-stat-desc">总计</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  body.innerHTML = moodHtml + actionHtml;
+
+  // 鼓励语
+  const footer = document.getElementById('review-footer');
+  let encouragement = '';
+  if (review.totalActions >= 10) {
+    encouragement = '这一周过得很充实，继续保持 ✨';
+  } else if (review.totalActions >= 5) {
+    encouragement = '不错的一周，每一个小坚持都算数';
+  } else if (review.totalActions > 0) {
+    encouragement = '有开始就是好的，下周多宜几个';
+  } else if (review.moodCount > 0) {
+    if (review.moodAvg >= 3.5) {
+      encouragement = '心情不错的一周，下周试试宜点什么';
+    } else {
+      encouragement = '辛苦了，下周从一件小事开始吧';
+    }
+  }
+  footer.textContent = encouragement;
 }
 
 function getMoodEmoji(mood) {

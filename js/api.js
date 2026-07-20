@@ -59,8 +59,10 @@ function incrementClientCount() {
 
 /**
  * 获取今日黄历（含运势、每日一言）
+ * @param {object} profile 用户档案
+ * @param {string|null} recentContext 最近几天的上下文摘要（心情+打卡）
  */
-async function fetchHuangli(profile) {
+async function fetchHuangli(profile, recentContext) {
   // 客户端限流：超过当日上限直接用 Mock 数据
   const limit = checkClientRateLimit();
   if (!limit.allowed) {
@@ -78,7 +80,7 @@ async function fetchHuangli(profile) {
     const resp = await fetch('/api/huangli', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile })
+      body: JSON.stringify({ profile, recentContext: recentContext || null })
     });
 
     // 服务端限流：429

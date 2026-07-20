@@ -798,6 +798,109 @@ body::before {
   backdrop-filter: blur(6px);
 }
 
+/* ===== 每周回顾卡 ===== */
+.review-card {
+  margin: 0 20px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(6px);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.review-title {
+  font-family: var(--font-brush);
+  font-size: 18px;
+  color: var(--color-ink);
+  letter-spacing: 2px;
+}
+
+.review-days-tag {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--color-ink-faint);
+  background: var(--bg-paper-dark);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+
+.review-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-section-label {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--color-ink-light);
+  letter-spacing: 1px;
+}
+
+.review-mood-row {
+  display: flex;
+  gap: 8px;
+  font-size: 20px;
+}
+
+.mood-dot {
+  transition: transform 0.2s;
+}
+
+.review-mood-desc {
+  font-size: 14px;
+  color: var(--color-ink-medium);
+}
+
+.review-stats-row {
+  display: flex;
+  gap: 20px;
+}
+
+.review-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.review-stat-num {
+  font-family: var(--font-brush);
+  font-size: 24px;
+  color: var(--color-ink);
+}
+
+.review-stat-desc {
+  font-size: 12px;
+  color: var(--color-ink-light);
+  margin-top: 2px;
+}
+
+.review-footer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--color-ink-medium);
+  text-align: center;
+  line-height: 1.6;
+}
+
 .history-header {
   display: flex;
   justify-content: space-between;

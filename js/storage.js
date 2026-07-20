@@ -11,7 +11,8 @@ const STORAGE_KEY = 'yishenghuo_data';
  *   profile: { goals, sleepType, customReminders, createdAt },
  *   huangli: { '2026-07-19': { lunar, items, fortune, quote } },
  *   moods: { '2026-07-19': { mood: 'good', note: '' } },
- *   checkins: { '2026-07-19': true }  // 当天有操作即记为打卡
+ *   checkins: { '2026-07-19': true },  // 当天有操作即记为打卡
+ *   streakFreeze: { '2026-07': ['2026-07-15'] }  // 每月使用的免死日期
  * }
  */
 
@@ -23,10 +24,11 @@ function getData() {
       profile: data.profile || null,
       huangli: data.huangli || {},
       moods: data.moods || {},
-      checkins: data.checkins || {}
+      checkins: data.checkins || {},
+      streakFreeze: data.streakFreeze || {}
     };
   } catch {
-    return { profile: null, huangli: {}, moods: {}, checkins: {} };
+    return { profile: null, huangli: {}, moods: {}, checkins: {}, streakFreeze: {} };
   }
 }
 
@@ -94,24 +96,73 @@ function saveMoodData(dateKey, mood) {
   saveData(data);
 }
 
-/* ===== 打卡统计 ===== */
+/* ===== 打卡统计（含断签容错）===== */
+
+const FREEZE_PER_MONTH = 2; // 每月 2 次免死
+
+/**
+ * 获取某月已使用的免死次数
+ */
+function getFreezeUsed(yearMonth) {
+  const data = getData();
+  const freezes = data.streakFreeze[yearMonth] || [];
+  return freezes.length;
+}
+
+/**
+ * 获取某月剩余免死次数
+ */
+function getFreezeRemaining(yearMonth) {
+  return Math.max(0, FREEZE_PER_MONTH - getFreezeUsed(yearMonth));
+}
+
+/**
+ * 尝试为某天使用一次免死，成功返回 true
+ */
+function tryUseFreeze(dateKey) {
+  const d = new Date(dateKey);
+  const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const data = getData();
+  if (!data.streakFreeze) data.streakFreeze = {};
+  if (!data.streakFreeze[yearMonth]) data.streakFreeze[yearMonth] = [];
+  if (data.streakFreeze[yearMonth].length >= FREEZE_PER_MONTH) return false;
+  if (data.streakFreeze[yearMonth].includes(dateKey)) return false; // 同一天不重复用
+  data.streakFreeze[yearMonth].push(dateKey);
+  saveData(data);
+  return true;
+}
 
 function getStreak() {
   const data = getData();
   const checkins = data.checkins || {};
+  const streakFreeze = data.streakFreeze || {};
   let streak = 0;
   const today = new Date();
+  let freezeUsed = false;
 
   // 从今天往回数连续天数
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = getDateKey(d);
+    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
     if (checkins[key]) {
       streak++;
     } else if (i > 0) {
-      // 今天没打卡不算断，但昨天没打卡就断了
-      break;
+      // 没打卡，尝试用免死
+      const freezes = streakFreeze[yearMonth] || [];
+      const freezeAvailable = freezes.length < FREEZE_PER_MONTH;
+      const alreadyFrozen = freezes.includes(key);
+
+      if (freezeAvailable && !alreadyFrozen && !freezeUsed) {
+        // 使用一次免死，不中断 streak
+        tryUseFreeze(key);
+        streak++;
+        freezeUsed = true;
+      } else {
+        break;
+      }
     }
   }
   return streak;
@@ -184,10 +235,131 @@ function getRecentDays(count) {
   return days;
 }
 
+/**
+ * 获取最近 N 天的上下文摘要，用于注入 AI prompt
+ * 返回 AI 能读懂的自然语言描述
+ */
+function getRecentContextForAI(days = 3) {
+  const data = getData();
+  const today = new Date();
+  const lines = [];
+
+  for (let i = days; i >= 1; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = getDateKey(d);
+    const mood = data.moods[key];
+    const huangli = data.huangli[key];
+
+    const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`;
+    const parts = [];
+
+    // 心情
+    if (mood && mood.mood) {
+      const moodMap = { great: '很好', good: '不错', ok: '一般', bad: '不太好', terrible: '糟糕' };
+      parts.push(`心情${moodMap[mood.mood] || mood.mood}`);
+      if (mood.note) parts.push(`写了"${mood.note}"`);
+    }
+
+    // 打卡情况
+    if (huangli && huangli.items) {
+      const doneItems = huangli.items.filter(i => i.status === 'done');
+      const skipItems = huangli.items.filter(i => i.status === 'skip');
+      if (doneItems.length > 0) {
+        parts.push(`做到了：${doneItems.map(i => i.title).join('、')}`);
+      }
+      if (skipItems.length > 0) {
+        parts.push(`没做到：${skipItems.map(i => i.title).join('、')}`);
+      }
+    }
+
+    if (parts.length > 0) {
+      lines.push(`${dateStr}：${parts.join('；')}`);
+    }
+  }
+
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
 /* ===== 重置 ===== */
 
 function resetAllData() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+/* ===== 每周回顾 ===== */
+
+/**
+ * 获取本周（周一到今天）的回顾数据
+ * @returns {{ totalDays, activeDays, doneYi, keptJi, totalActions, moodAvg, moodLabels, bestDay, hasData }}
+ */
+function getWeeklyReview() {
+  const data = getData();
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=周日
+  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 距周一几天
+
+  const weekDays = [];
+  for (let i = mondayOffset; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    weekDays.push(getDateKey(d));
+  }
+
+  let activeDays = 0;
+  let doneYi = 0;
+  let keptJi = 0;
+  let totalActions = 0;
+  let moodSum = 0;
+  let moodCount = 0;
+  let moodLabels = [];
+  let bestDay = null;
+  let bestDayScore = -1;
+
+  const moodScore = { great: 5, good: 4, ok: 3, bad: 2, terrible: 1 };
+
+  for (const key of weekDays) {
+    const huangli = data.huangli[key];
+    const mood = data.moods[key];
+    let dayScore = 0;
+
+    if (huangli && huangli.items) {
+      activeDays++;
+      for (const item of huangli.items) {
+        if (item.status === 'done') {
+          totalActions++;
+          dayScore++;
+          if (item.type === 'yi') doneYi++;
+          else keptJi++;
+        }
+      }
+    }
+
+    if (mood && mood.mood) {
+      moodSum += moodScore[mood.mood] || 3;
+      moodCount++;
+      moodLabels.push(mood.mood);
+      dayScore += (moodScore[mood.mood] || 3) * 0.5;
+    }
+
+    if (dayScore > bestDayScore) {
+      bestDayScore = dayScore;
+      bestDay = key;
+    }
+  }
+
+  return {
+    totalDays: weekDays.length,
+    activeDays,
+    doneYi,
+    keptJi,
+    totalActions,
+    moodAvg: moodCount > 0 ? moodSum / moodCount : 0,
+    moodCount,
+    moodLabels,
+    bestDay,
+    hasData: activeDays > 0 || moodCount > 0
+  };
 }
 
 /* ===== 数据导出 / 导入 ===== */

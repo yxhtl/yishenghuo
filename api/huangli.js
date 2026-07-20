@@ -124,7 +124,13 @@ const SYSTEM_PROMPT = `你是一个现代生活黄历的生成器。
 10. 适当结合今天星期几给出建议（如周末适合联系家人、工作日注意效率）
 11. lunar 字段填农历日期，格式如"丙午年 六月十九"
 12. fortune 从 大吉/中吉/小吉/平/末吉 中选一个，配一句描述
-13. quote 给一句温暖有道理的话，配作者出处`;
+13. quote 给一句温暖有道理的话，配作者出处
+14. 【重要】如果提供了用户近几天的记录，必须参考：
+    - 如果用户连续心情不好，建议中要体现关怀，避免说教
+    - 如果用户昨天"没做到"某件事，今天可以换个角度鼓励，不要重复同一条
+    - 如果用户最近做得很好，给予肯定并建议保持或尝试新的
+    - 如果用户连续没做某类建议，换一个方向，别重复
+15. 每天的建议尽量和前几天不重复，保持新鲜感`;
 
 module.exports = async (req, res) => {
   // CORS（本地调试用，同域部署不需要）
@@ -163,7 +169,7 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
   }
 
-  const { profile } = req.body || {};
+  const { profile, recentContext } = req.body || {};
 
   if (!profile) {
     return res.status(400).json({ error: 'Profile is required' });
@@ -173,11 +179,22 @@ module.exports = async (req, res) => {
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const todayStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`;
 
-  const userPrompt = `用户档案：
+  let userPrompt = `用户档案：
 - 在意的事：${profile.goals ? profile.goals.join('、') : '未指定'}
 - 作息类型：${profile.sleepType || '未指定'}
 - 自定义提醒：${profile.customReminders || '无'}
-- 今天：${todayStr}
+- 今天：${todayStr}`;
+
+  if (recentContext) {
+    userPrompt += `
+
+用户近几天的记录：
+${recentContext}
+
+请结合以上记录生成今天的建议，让用户感觉你真的记得他们最近的状态。`;
+  }
+
+  userPrompt += `
 
 请生成今日黄历。只返回 JSON，不要其他内容。`;
 
