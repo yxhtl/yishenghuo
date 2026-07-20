@@ -1,7 +1,6 @@
 /* ===== 字体引入 ===== */
-/* 使用国内镜像 fonts.loli.net 替代 fonts.googleapis.com，解决国内加载慢的问题 */
-/* Service Worker 会自动缓存字体文件，首次加载后离线可用 */
-@import url('https://fonts.loli.net/css2?family=Ma+Shan+Zheng&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap');
+/* 字体通过 index.html 中的 <link> 非阻塞加载，CSS 变量中优先使用系统手写体 */
+/* 如系统有手写体字体则零延迟显示，Google Fonts 镜像仅作为增强 */
 
 /* ===== 全局变量 ===== */
 :root {
@@ -27,9 +26,9 @@
   --shadow-card-hover: 0 6px 24px rgba(60, 40, 20, 0.12);
   --radius: 14px;
   --radius-sm: 10px;
-  --font-brush: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
-  --font-cursive: "Long Cang", "STXingkai", "XingKai SC", cursive;
-  --font-serif: "ZCOOL XiaoWei", "Songti SC", "SimSun", "STSong", serif;
+  --font-brush: "STKaiti", "KaiTi", "Ma Shan Zheng", serif;
+  --font-cursive: "STXingkai", "XingKai SC", "Long Cang", cursive;
+  --font-serif: "Songti SC", "SimSun", "STSong", "ZCOOL XiaoWei", serif;
   --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
