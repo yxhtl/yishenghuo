@@ -4,15 +4,17 @@
  */
 
 async function generateShareImage(huangli) {
-  // 等待自定义字体加载完成，避免 Canvas 绘制时回退到默认字体
+  // 等待自定义字体加载完成，但设置 3 秒超时避免无限等待
   try {
-    await Promise.all([
+    const fontLoadPromise = Promise.all([
       document.fonts.load('bold 26px "Ma Shan Zheng"'),
       document.fonts.load('bold 30px "Ma Shan Zheng"'),
       document.fonts.load('14px "ZCOOL XiaoWei"'),
       document.fonts.load('16px "Long Cang"')
-    ]);
-    await document.fonts.ready;
+    ]).then(() => document.fonts.ready);
+
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('timeout'), 3000));
+    await Promise.race([fontLoadPromise, timeoutPromise]);
   } catch (e) {
     console.warn('[宜生活] 字体加载未完成，使用回退字体');
   }
@@ -101,6 +103,15 @@ async function generateShareImage(huangli) {
   ctx.fillStyle = '#7a6e60';
   ctx.fillText(huangli.lunar || '', W / 2, y);
   y += 20;
+
+  // 天气信息（如果有）
+  if (typeof currentWeather !== 'undefined' && currentWeather) {
+    ctx.font = '12px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
+    ctx.fillStyle = '#a89c8a';
+    const weatherStr = `${currentWeather.emoji || ''} ${currentWeather.desc || ''} ${currentWeather.temperature}° ${currentWeather.city || ''}`;
+    ctx.fillText(weatherStr, W / 2, y);
+    y += 16;
+  }
 
   drawInkLine(ctx, 60, y, W - 60, y);
   y += 24;

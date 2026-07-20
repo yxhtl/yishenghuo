@@ -8,6 +8,40 @@ let deferredPrompt = null;
 let onboardingGoals = [];
 let onboardingSleep = '';
 
+/* ===== 场景模板 ===== */
+const SCENE_TEMPLATES = {
+  exam: {
+    name: '考研党',
+    goals: ['学习成长', '工作效率', '情绪状态'],
+    sleepType: '夜猫子',
+    customReminders: '别熬夜刷手机、少喝咖啡、别拖延复习计划'
+  },
+  parent: {
+    name: '新手爸妈',
+    goals: ['家人关系', '健康', '情绪状态'],
+    sleepType: '看心情',
+    customReminders: '多睡觉、少刷手机焦虑、多关心伴侣'
+  },
+  fitness: {
+    name: '减脂人群',
+    goals: ['健康', '情绪状态'],
+    sleepType: '早起鸟',
+    customReminders: '别吃夜宵、少喝奶茶、别冲动消费代餐'
+  },
+  work: {
+    name: '职场新人',
+    goals: ['工作效率', '学习成长', '情绪状态'],
+    sleepType: '早起鸟',
+    customReminders: '少内耗、别什么都答应别人、别拖延'
+  },
+  freelancer: {
+    name: '自由职业',
+    goals: ['工作效率', '健康', '情绪状态'],
+    sleepType: '看心情',
+    customReminders: '别拖延、保持规律作息、别过度内耗'
+  }
+};
+
 /* ===== 初始化 ===== */
 window.addEventListener('DOMContentLoaded', init);
 
@@ -78,11 +112,18 @@ async function previewDemo() {
   showView('view-onboarding');
   showOnboardScreen('onboard-loading');
 
+  // 演示模式也获取天气
+  let weather = null;
+  try {
+    weather = await getWeather();
+  } catch {}
+
   const recentContext = getRecentContextForAI(3);
-  const huangli = await fetchHuangli(demoProfile, recentContext);
+  const huangli = await fetchHuangli(demoProfile, recentContext, weather);
   saveHuangliData(getTodayKey(), huangli);
 
   renderHome(huangli);
+  renderWeather(weather);
   showView('view-home');
   showDataSourceToast(huangli);
   showToast('这是演示效果，可在设置中修改档案');
@@ -90,6 +131,41 @@ async function previewDemo() {
 
 function toggleOption(el) {
   el.classList.toggle('selected');
+}
+
+/**
+ * 快速应用场景模板：用预设档案直接生成黄历
+ */
+async function applyTemplate(templateId) {
+  const template = SCENE_TEMPLATES[templateId];
+  if (!template) return;
+
+  const profile = {
+    goals: template.goals,
+    sleepType: template.sleepType,
+    customReminders: template.customReminders,
+    createdAt: getTodayKey()
+  };
+
+  saveProfileData(profile);
+
+  showView('view-onboarding');
+  showOnboardScreen('onboard-loading');
+
+  let weather = null;
+  try {
+    weather = await getWeather();
+  } catch {}
+
+  const recentContext = getRecentContextForAI(3);
+  const huangli = await fetchHuangli(profile, recentContext, weather);
+  saveHuangliData(getTodayKey(), huangli);
+
+  renderHome(huangli);
+  renderWeather(weather);
+  showView('view-home');
+  showDataSourceToast(huangli);
+  showToast(`已应用「${template.name}」模板，可在设置中修改`);
 }
 
 function selectSingle(el, qid) {
@@ -135,11 +211,18 @@ async function finishOnboarding() {
   showView('view-onboarding');
   showOnboardScreen('onboard-loading');
 
+  // 尝试获取天气，让 AI 建议更贴心
+  let weather = null;
+  try {
+    weather = await getWeather();
+  } catch {}
+
   const recentContext = getRecentContextForAI(3);
-  const huangli = await fetchHuangli(profile, recentContext);
+  const huangli = await fetchHuangli(profile, recentContext, weather);
   saveHuangliData(getTodayKey(), huangli);
 
   renderHome(huangli);
+  renderWeather(weather);
   showView('view-home');
   showDataSourceToast(huangli);
 }
@@ -151,6 +234,20 @@ async function loadHome() {
 
   showView('view-home');
 
+  // 先拿缓存黄历快速渲染（含天气占位）
+  if (huangli) {
+    renderHome(huangli);
+  }
+
+  // 异步获取天气（不阻塞主流程）
+  let weather = null;
+  try {
+    weather = await getWeather();
+  } catch {
+    // 天气获取失败不影响核心功能
+  }
+  renderWeather(weather);
+
   if (!huangli) {
     document.getElementById('huangli-list').innerHTML = `
       <div class="empty-state">
@@ -160,7 +257,7 @@ async function loadHome() {
     `;
     const profile = getProfile();
     const recentContext = getRecentContextForAI(3);
-    huangli = await fetchHuangli(profile, recentContext);
+    huangli = await fetchHuangli(profile, recentContext, weather);
     saveHuangliData(todayKey, huangli);
   }
 
@@ -180,6 +277,8 @@ function renderHome(huangli) {
 
   // 运势签
   renderFortune(huangli.fortune);
+
+  // 天气（如果有缓存的话也显示）
 
   // 宜/忌
   renderHuangliList(huangli);
@@ -211,6 +310,26 @@ function renderSolarTerm() {
   } else {
     bar.style.display = 'none';
   }
+}
+
+/* ===== 天气 ===== */
+let currentWeather = null; // 缓存天气供分享等功能使用
+
+function renderWeather(weather) {
+  const bar = document.getElementById('weather-bar');
+  if (!bar) return;
+
+  if (!weather) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  currentWeather = weather;
+  bar.style.display = 'flex';
+  document.getElementById('weather-emoji').textContent = weather.emoji || '🌡️';
+  document.getElementById('weather-temp').textContent = `${weather.temperature}°`;
+  document.getElementById('weather-desc').textContent = weather.desc || '';
+  document.getElementById('weather-city').textContent = weather.city || '';
 }
 
 /* ===== 运势签 ===== */
@@ -313,8 +432,15 @@ async function refreshHuangli() {
     </div>
   `;
 
+  // 刷新时也获取最新天气
+  let weather = null;
+  try {
+    weather = await getWeather();
+  } catch {}
+  renderWeather(weather);
+
   const recentContext = getRecentContextForAI(3);
-  const huangli = await fetchHuangli(profile, recentContext);
+  const huangli = await fetchHuangli(profile, recentContext, weather);
   saveHuangliData(todayKey, huangli);
   renderHome(huangli);
   showDataSourceToast(huangli, '已更新今日黄历');

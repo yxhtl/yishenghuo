@@ -2,6 +2,9 @@
   "functions": {
     "api/huangli.js": {
       "maxDuration": 30
+    },
+    "api/weather.js": {
+      "maxDuration": 10
     }
   },
   "headers": [

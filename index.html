@@ -37,6 +37,17 @@
       <p class="onboard-subtitle">你的 AI 现代黄历<br>每一天，都宜点什么</p>
       <button class="btn-primary" onclick="startOnboarding()">开始使用</button>
       <button class="btn-text" onclick="previewDemo()" style="margin-top:8px;">先看看效果 ›</button>
+
+      <div class="onboard-templates">
+        <p class="onboard-hint">或快速选择身份</p>
+        <div class="template-chips">
+          <div class="template-chip" onclick="applyTemplate('exam')">📚 考研党</div>
+          <div class="template-chip" onclick="applyTemplate('parent')">👶 新手爸妈</div>
+          <div class="template-chip" onclick="applyTemplate('fitness')">💪 减脂人群</div>
+          <div class="template-chip" onclick="applyTemplate('work')">💼 职场新人</div>
+          <div class="template-chip" onclick="applyTemplate('freelancer')">🎧 自由职业</div>
+        </div>
+      </div>
     </div>
 
     <!-- 问题1 -->
@@ -98,6 +109,14 @@
     </div>
     <div class="solar-term-bar" id="solar-term-bar" style="display:none;">
       <span class="solar-term-tag" id="solar-term-text">—</span>
+    </div>
+
+    <!-- 天气 -->
+    <div class="weather-bar" id="weather-bar" style="display:none;">
+      <span class="weather-emoji" id="weather-emoji">—</span>
+      <span class="weather-temp" id="weather-temp">—</span>
+      <span class="weather-desc" id="weather-desc">—</span>
+      <span class="weather-city" id="weather-city"></span>
     </div>
 
     <!-- 运势签 -->
@@ -269,6 +288,7 @@
   <div id="toast" class="toast" style="display:none;"></div>
 
   <script src="js/storage.js"></script>
+  <script src="js/weather.js"></script>
   <script src="js/api.js"></script>
   <script src="js/share.js"></script>
   <script src="js/app.js"></script>

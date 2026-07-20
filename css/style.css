@@ -259,6 +259,40 @@ body::before {
   margin-top: 32px;
 }
 
+/* 场景模板快选 */
+.onboard-templates {
+  margin-top: 40px;
+  width: 100%;
+}
+
+.template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.template-chip {
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--color-border);
+  border-radius: 100px;
+  font-size: 14px;
+  font-family: var(--font-serif);
+  color: var(--color-ink-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.template-chip:active {
+  transform: scale(0.93);
+  background: var(--color-ink);
+  color: var(--bg-paper);
+  border-color: var(--color-ink);
+}
+
 /* 选项列表 */
 .option-list {
   width: 100%;
@@ -408,6 +442,50 @@ body::before {
   border-radius: 4px;
   letter-spacing: 2px;
   box-shadow: 0 2px 8px rgba(184, 50, 41, 0.2);
+}
+
+/* ===== 天气栏 ===== */
+.weather-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 20px 16px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--color-ink-medium);
+  animation: card-in 0.4s ease-out;
+}
+
+.weather-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.weather-temp {
+  font-family: var(--font-brush);
+  font-size: 20px;
+  color: var(--color-ink);
+}
+
+.weather-desc {
+  color: var(--color-ink-light);
+}
+
+.weather-city {
+  color: var(--color-ink-faint);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.weather-bar::after {
+  content: '';
+  display: none;
 }
 
 /* ===== 运势签卡片 ===== */

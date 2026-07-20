@@ -61,8 +61,9 @@ function incrementClientCount() {
  * 获取今日黄历（含运势、每日一言）
  * @param {object} profile 用户档案
  * @param {string|null} recentContext 最近几天的上下文摘要（心情+打卡）
+ * @param {object|null} weather 天气数据（温度、天气描述、城市等）
  */
-async function fetchHuangli(profile, recentContext) {
+async function fetchHuangli(profile, recentContext, weather) {
   // 客户端限流：超过当日上限直接用 Mock 数据
   const limit = checkClientRateLimit();
   if (!limit.allowed) {
@@ -80,7 +81,11 @@ async function fetchHuangli(profile, recentContext) {
     const resp = await fetch('/api/huangli', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile, recentContext: recentContext || null })
+      body: JSON.stringify({
+        profile,
+        recentContext: recentContext || null,
+        weather: weather ? getWeatherContextText(weather) : null
+      })
     });
 
     // 服务端限流：429

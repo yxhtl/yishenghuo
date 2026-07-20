@@ -130,7 +130,13 @@ const SYSTEM_PROMPT = `你是一个现代生活黄历的生成器。
     - 如果用户昨天"没做到"某件事，今天可以换个角度鼓励，不要重复同一条
     - 如果用户最近做得很好，给予肯定并建议保持或尝试新的
     - 如果用户连续没做某类建议，换一个方向，别重复
-15. 每天的建议尽量和前几天不重复，保持新鲜感`;
+15. 每天的建议尽量和前几天不重复，保持新鲜感
+16. 【天气】如果提供了天气信息，建议要结合天气：
+    - 晴天适合出门、晒太阳、散步
+    - 雨天适合室内活动、读书、听歌、发呆
+    - 冷天提醒保暖、喝热饮
+    - 热天提醒多喝水、少喝冷饮
+    - 但不要生硬地提天气，要自然融入建议`;
 
 module.exports = async (req, res) => {
   // CORS（本地调试用，同域部署不需要）
@@ -169,7 +175,7 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
   }
 
-  const { profile, recentContext } = req.body || {};
+  const { profile, recentContext, weather } = req.body || {};
 
   if (!profile) {
     return res.status(400).json({ error: 'Profile is required' });
@@ -192,6 +198,14 @@ module.exports = async (req, res) => {
 ${recentContext}
 
 请结合以上记录生成今天的建议，让用户感觉你真的记得他们最近的状态。`;
+  }
+
+  if (weather) {
+    userPrompt += `
+
+今日天气：${weather}
+
+请结合天气给出建议，例如晴天宜出门、雨天宜室内活动、冷天宜保暖、热天宜多喝水。但不要生硬地提及天气，要自然融入。`;
   }
 
   userPrompt += `
