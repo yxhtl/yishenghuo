@@ -1,6 +1,12 @@
-# Cloudflare Pages 配置
+# Cloudflare Workers + 静态资源配置
 name = "yishenghuo"
 compatibility_date = "2024-12-01"
+main = "src/index.js"
 
-# 环境变量在 Cloudflare Dashboard → Pages → 项目 → Settings → Environment variables 中配置
-# 本地开发时使用 .env 文件（wrangler pages dev 会自动读取）
+# 静态资源（index.html, css/, js/ 等放在根目录）
+[assets]
+directory = "."
+binding = "ASSETS"
+
+# 环境变量在 Cloudflare Dashboard → Settings → Environment variables 中配置
+# DEEPSEEK_API_KEY = sk-xxxxxxxx
