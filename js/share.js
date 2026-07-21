@@ -157,24 +157,19 @@ async function generateShareImage(huangli) {
     const cardHeight = cardPaddingTop + 36 + yiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(184, 50, 41, 0.05)');
 
-    // 宜字和印章
+    // 宜字和印章 - 使用 middle 对齐保持一致
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
-    ctx.textBaseline = 'alphabetic';
-    const yiY = y + cardPaddingTop + 22;
+    ctx.textBaseline = 'middle';
+    const yiY = y + cardPaddingTop + 18;
     ctx.fillText('宜', W / 2, yiY);
-    drawSeal(ctx, W / 2 + 28, yiY - 8, 14, '吉');
+    drawSeal(ctx, W / 2 + 28, yiY - 4, 14, '吉');
 
     // 宜忌内容
     yiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 44 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 40 + i * itemHeight);
     });
     y += cardHeight + 12;
-  }
-
-  // 宜/忌卡片间距
-  if (yiItems.length > 0 && jiItems.length > 0) {
-    y += BASE * 0.75; // 卡片间距
   }
 
   // 忌
@@ -186,15 +181,16 @@ async function generateShareImage(huangli) {
     const cardHeight = cardPaddingTop + 36 + jiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(26, 22, 18, 0.03)');
 
+    // 忌字和印章 - 使用 middle 对齐保持一致
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
-    ctx.textBaseline = 'alphabetic';
-    const jiY = y + cardPaddingTop + 22;
+    ctx.textBaseline = 'middle';
+    const jiY = y + cardPaddingTop + 18;
     ctx.fillText('忌', W / 2, jiY);
-    drawSeal(ctx, W / 2 + 28, jiY - 8, 14, '慎');
+    drawSeal(ctx, W / 2 + 28, jiY - 4, 14, '慎');
 
     jiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 44 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 40 + i * itemHeight);
     });
     y += cardHeight + 12;
   }
