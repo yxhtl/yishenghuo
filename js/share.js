@@ -42,15 +42,15 @@ async function generateShareImage(huangli) {
   // 根据实际行数计算一言区域高度
   const quoteSectionHeight = quote ? (BASE * 1.5 + BASE * 0.75 + quoteLines * BASE * 0.875 + BASE * 0.75) : 0;
 
-  let H = BASE * 3; // 顶部留白 3x
-  H += BASE * 2.5;  // 标题区高度（灯笼+宜生活+农历+天气）
-  if (fortune) H += BASE * 3.5; // 运势区（标签+运势+说明+间距）
+  let H = BASE * 3.5; // 顶部留白增大（灯笼和文字间距）
+  H += BASE * 2.8;  // 标题区高度（灯笼+宜生活+农历+天气）
+  if (fortune) H += BASE * 4; // 运势区增大（解决中吉与今日运势重叠）
   H += yiItems.length * BASE * 1.25 + BASE * 2.8; // 宜卡片（增加内边距）
   H += jiItems.length * BASE * 1.25 + BASE * 2.8; // 忌卡片（增加内边距）
   if (yiItems.length > 0 && jiItems.length > 0) H += BASE * 0.75; // 卡片间距
   if (quote) H += quoteSectionHeight;
-  H += BASE * 2.5; // 底部区域
-  H = Math.max(H, 600);
+  H += BASE * 3; // 底部区域增大（解决一言和日期重叠）
+  H = Math.max(H, 650);
 
   // 设置最终画布尺寸
   canvas.width = W * dpr;
@@ -83,8 +83,8 @@ async function generateShareImage(huangli) {
 
   ctx.textAlign = 'center';
 
-  // 顶部标题区 - 灯笼放在左侧
-  let y = BASE * 2;
+  // 顶部标题区 - 增大顶部留白
+  let y = BASE * 2.5;
   
   // 灯笼 + 宜生活 横向排列
   ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
@@ -104,13 +104,13 @@ async function generateShareImage(huangli) {
   ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(titleText, startX + lanternWidth + 8 + titleWidth/2, y + 4);
-  y += BASE * 0.875;
+    y += BASE * 1;   // 标题到农历间距增大
 
   // 农历
   ctx.font = '13px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#7a6e60';
   ctx.fillText(huangli.lunar || '', W / 2, y);
-  y += BASE * 0.625;
+  y += BASE * 0.7;
 
   // 天气信息（如果有）- 行间距缩小
   if (typeof currentWeather !== 'undefined' && currentWeather) {
@@ -124,25 +124,25 @@ async function generateShareImage(huangli) {
   drawInkLine(ctx, 60, y, W - 60, y);
   y += BASE * 1.25;
 
-  // 运势签 - 三层信息间距优化：标签+运势一组，说明另一组
+  // 运势签 - 增大各层间距避免重叠
   if (fortune) {
-    // 今日运势（小标签）- 使用深色确保清晰可见
+    // 今日运势（小标签）
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#4a4a4a';
     ctx.fillText('今日运势', W / 2, y);
-    y += BASE * 0.5; // 标签和运势挨很近 (12px)
+    y += BASE * 0.75; // 标签和运势间距增大 (18px)，避免重叠
 
     // 中吉（大结果）
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#9c1f17';
     ctx.fillText(fortune.grade, W / 2, y);
-    y += BASE * 1.5; // 运势和说明拉开距离，形成分组 (36px)
+    y += BASE * 1.6; // 运势和说明距离 (38px)
 
     // 说明文字
     ctx.font = '12px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#7a6e60';
     ctx.fillText(fortune.desc, W / 2, y);
-    y += BASE * 1.25;
+    y += BASE * 1.4;
 
     drawInkLine(ctx, 80, y, W - 80, y);
     y += BASE;
@@ -223,7 +223,7 @@ async function generateShareImage(huangli) {
   }
 
   // 底部 - 确保不被截断
-  y = H - BASE * 2.5;
+  y = H - BASE * 3;
   drawInkLine(ctx, 60, y - BASE * 0.5, W - 60, y - BASE * 0.5);
 
   const now = new Date();
