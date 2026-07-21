@@ -26,30 +26,28 @@ async function generateShareImage(huangli) {
   const fortune = huangli.fortune;
   const quote = huangli.quote;
 
-  // 先创建 ctx 用于测量每日一言的实际换行行数
+  // 创建 canvas 和 ctx
   const dpr = window.devicePixelRatio || 1;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
-  let quoteLines = 1;
-  if (quote && quote.text) {
-    ctx.font = '17px "Long Cang", "STXingkai", cursive';
-    quoteLines = countWrappedLines(ctx, quote.text, W - 100);
-  }
-
   // 基础间距单位 28px，整体更宽松
   const BASE = 28;
-  // 根据实际行数计算一言区域高度
-  const quoteSectionHeight = quote ? (BASE * 1.5 + BASE * 0.75 + quoteLines * BASE * 0.95 + BASE * 0.8) : 0;
+  // 根据实际行数计算一言区域高度（使用实际字体大小测量）
+  ctx.font = '18px "Long Cang", "STXingkai", cursive';
+  quoteLines = quote && quote.text ? countWrappedLines(ctx, quote.text, W - 80) : 1;
+  const quoteSectionHeight = quote ? (BASE * 1.5 + BASE + quoteLines * BASE * 0.95 + BASE * 0.8 + BASE) : 0;
 
-  let H = BASE * 4;     // 顶部留白
-  H += BASE * 3.2;     // 标题区高度（灯笼+宜生活+农历+天气）
-  if (fortune) H += BASE * 5;   // 运势区（大幅增加）
+  // 高度计算：所有内容都是流式的，底部日期紧跟在最后面
+  const footerHeight = BASE * 2.5; // 分隔线+日期的固定高度
+  let H = BASE * 4;       // 顶部留白
+  H += BASE * 3.2;       // 标题区高度（灯笼+宜生活+农历+天气）
+  if (fortune) H += BASE * 5;     // 运势区
   H += yiItems.length * BASE * 1.3 + BASE * 3.2; // 宜卡片
   H += jiItems.length * BASE * 1.3 + BASE * 3.2; // 忌卡片
   if (yiItems.length > 0 && jiItems.length > 0) H += BASE; // 卡片间距
   if (quote) H += quoteSectionHeight;
-  H += BASE * 4;    // 底部区域（大幅增加）
+  H += footerHeight;    // 底部日期区（流式，不再固定位置）
   H = Math.max(H, 750);
 
   // 设置最终画布尺寸
@@ -217,17 +215,19 @@ async function generateShareImage(huangli) {
     y += BASE;
   }
 
-  // 底部 - 大幅增加空间
-  y = H - BASE * 4;
-  drawInkLine(ctx, 60, y - BASE * 0.8, W - 60, y - BASE * 0.8);
+  // ====== 底部日期区：流式布局，紧跟内容 ======
+  y += BASE * 1.2;     // 与上方内容的间距
+  drawInkLine(ctx, 60, y, W - 60, y);
+  y += BASE * 1;
 
   const now = new Date();
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const solarStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} 星期${weekdays[now.getDay()]}`;
 
-  ctx.font = '14px "ZCOOL XiaoWei", sans-serif';
+  ctx.font = '13px "ZCOOL XiaoWei", sans-serif';
   ctx.fillStyle = '#8a7e6a';
-  ctx.fillText(solarStr, W / 2, y + BASE * 0.8);
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(solarStr, W / 2, y);
 
   return canvas.toDataURL('image/png');
 }
