@@ -33,22 +33,25 @@ async function generateShareImage(huangli) {
 
   let quoteLines = 1;
   if (quote && quote.text) {
-    ctx.font = '16px "Long Cang", "STXingkai", cursive';
+    ctx.font = '17px "Long Cang", "STXingkai", cursive';
     quoteLines = countWrappedLines(ctx, quote.text, W - 100);
   }
 
+  // 基础间距单位 16px，所有间距都是它的倍数
+  const BASE = 16;
   // 根据实际行数计算一言区域高度
-  // 结构：分割线间距24 + 标签20 + 首行偏移14 + (行数-1)*24行距 + 作者20 + 底部间距10
-  const quoteSectionHeight = quote ? (24 + 20 + 14 + (quoteLines - 1) * 24 + 20 + 10) : 0;
+  // 结构：分割线间距(1.5x) + 标签(1.25x) + 首行偏移(0.75x) + (行数-1)*1.5x行距 + 作者(1.25x) + 底部间距(1x)
+  const quoteSectionHeight = quote ? (BASE * 1.5 + BASE * 1.25 + BASE * 0.75 + (quoteLines - 1) * BASE * 1.5 + BASE * 1.25 + BASE) : 0;
 
-  let H = 80;
-  H += 70;
-  if (fortune) H += 64;
-  H += yiItems.length * 32 + 50;
-  H += jiItems.length * 32 + 50;
+  let H = BASE * 5; // 顶部留白 5x
+  H += BASE * 3.5;  // 标题区高度（灯笼+宜生活+农历+天气）
+  if (fortune) H += BASE * 5; // 运势区（标签+运势+说明+间距）
+  H += yiItems.length * BASE * 2 + BASE * 3.5; // 宜卡片
+  H += jiItems.length * BASE * 2 + BASE * 3.5; // 忌卡片
+  if (yiItems.length > 0 && jiItems.length > 0) H += BASE; // 卡片间距
   if (quote) H += quoteSectionHeight;
-  H += 50;
-  H = Math.max(H, 480);
+  H += BASE * 4; // 底部区域
+  H = Math.max(H, 520);
 
   // 设置最终画布尺寸
   canvas.width = W * dpr;
@@ -81,113 +84,142 @@ async function generateShareImage(huangli) {
 
   ctx.textAlign = 'center';
 
-  // 顶部标题
-  let y = 50;
-  ctx.font = '32px sans-serif';
-  ctx.fillText('🏮', W / 2, y);
-  y += 24;
-
-  ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
+  // 顶部标题区 - 灯笼放在左侧
+  let y = BASE * 3;
+  
+  // 灯笼 + 宜生活 横向排列
+  ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#1a1612';
-  ctx.fillText('宜 生 活', W / 2, y);
-  y += 22;
+  const titleText = '宜生活';
+  const titleWidth = ctx.measureText(titleText).width;
+  const lanternWidth = 28;
+  const totalWidth = lanternWidth + 8 + titleWidth;
+  const startX = (W - totalWidth) / 2;
+  
+  // 绘制灯笼
+  ctx.font = '24px sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏮', startX + lanternWidth/2, y);
+  
+  // 绘制标题
+  ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(titleText, startX + lanternWidth + 8 + titleWidth/2, y + 4);
+  y += BASE * 1.5;
 
-  ctx.font = '14px "Ma Shan Zheng", "STKaiti", serif';
+  // 农历
+  ctx.font = '13px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#7a6e60';
   ctx.fillText(huangli.lunar || '', W / 2, y);
-  y += 20;
+  y += BASE * 0.875;
 
-  // 天气信息（如果有）
+  // 天气信息（如果有）- 行间距缩小
   if (typeof currentWeather !== 'undefined' && currentWeather) {
     ctx.font = '12px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
     ctx.fillStyle = '#a89c8a';
     const weatherStr = `${currentWeather.emoji || ''} ${currentWeather.desc || ''} ${currentWeather.temperature}° ${currentWeather.city || ''}`;
     ctx.fillText(weatherStr, W / 2, y);
-    y += 16;
+    y += BASE * 0.75;
   }
 
   drawInkLine(ctx, 60, y, W - 60, y);
-  y += 24;
+  y += BASE * 1.5;
 
-  // 运势签
+  // 运势签 - 三层信息间距优化
   if (fortune) {
+    // 今日运势（小标签）
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#bfb3a1';
     ctx.fillText('今日运势', W / 2, y);
-    y += 24;
+    y += BASE * 1.125; // 标签和运势挨近一点
 
-    ctx.font = 'bold 24px "Ma Shan Zheng", "STKaiti", serif';
+    // 中吉（大结果）
+    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#9c1f17';
     ctx.fillText(fortune.grade, W / 2, y);
-    y += 16;
+    y += BASE * 1.5; // 运势和说明拉开距离
 
+    // 说明文字
     ctx.font = '12px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#7a6e60';
-    ctx.fillText(fortune.desc, W / 2, y + 14);
-    y += 34;
+    ctx.fillText(fortune.desc, W / 2, y);
+    y += BASE * 1.5;
 
     drawInkLine(ctx, 80, y, W - 80, y);
-    y += 20;
+    y += BASE * 1.25;
   }
 
   // 宜
   if (yiItems.length > 0) {
-    drawCardBg(ctx, 28, y, W - 56, yiItems.length * 32 + 40, 'rgba(184, 50, 41, 0.05)');
+    drawCardBg(ctx, 28, y, W - 56, yiItems.length * BASE * 2 + BASE * 2.5, 'rgba(184, 50, 41, 0.05)');
 
+    // 宜字和印章
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
-    ctx.fillText('宜', W / 2, y + 30);
-    drawSeal(ctx, W / 2 + 28, y + 16, 14, '吉');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('宜', W / 2, y + BASE * 1.75);
+    // 印章对齐调整
+    drawSeal(ctx, W / 2 + 28, y + BASE * 1.5 - 2, 14, '吉');
 
-    ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
-    ctx.fillStyle = '#1a1612';
+    // 宜忌内容 - 图标和文字基线对齐
     yiItems.forEach((item, i) => {
-      ctx.fillText(`${item.icon}  ${item.title}`, W / 2, y + 55 + i * 32);
+      drawYiJiItem(ctx, item, W / 2, y + BASE * 2.75 + i * BASE * 2);
     });
-    y += yiItems.length * 32 + 50;
+    y += yiItems.length * BASE * 2 + BASE * 2.5;
+  }
+
+  // 宜/忌卡片间距
+  if (yiItems.length > 0 && jiItems.length > 0) {
+    y += BASE; // 增加卡片间距
   }
 
   // 忌
   if (jiItems.length > 0) {
-    drawCardBg(ctx, 28, y, W - 56, jiItems.length * 32 + 40, 'rgba(26, 22, 18, 0.03)');
+    drawCardBg(ctx, 28, y, W - 56, jiItems.length * BASE * 2 + BASE * 2.5, 'rgba(26, 22, 18, 0.03)');
 
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
-    ctx.fillText('忌', W / 2, y + 30);
-    drawSeal(ctx, W / 2 + 28, y + 16, 14, '慎');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('忌', W / 2, y + BASE * 1.75);
+    // 印章对齐调整
+    drawSeal(ctx, W / 2 + 28, y + BASE * 1.5 - 2, 14, '慎');
 
-    ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
-    ctx.fillStyle = '#1a1612';
     jiItems.forEach((item, i) => {
-      ctx.fillText(`${item.icon}  ${item.title}`, W / 2, y + 55 + i * 32);
+      drawYiJiItem(ctx, item, W / 2, y + BASE * 2.75 + i * BASE * 2);
     });
-    y += jiItems.length * 32 + 50;
+    y += jiItems.length * BASE * 2 + BASE * 2.5;
   }
 
   // 每日一言
   if (quote) {
     drawInkLine(ctx, 80, y, W - 80, y);
-    y += 24;
+    y += BASE * 1.5;
 
     ctx.font = '13px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
     ctx.fillText('每日一言', W / 2, y);
-    y += 20;
+    y += BASE * 1.25;
 
-    ctx.font = '16px "Long Cang", "STXingkai", cursive';
+    // 引用文 - 增加字距
+    ctx.font = '17px "Long Cang", "STXingkai", cursive';
     ctx.fillStyle = '#4a3f35';
-    wrapText(ctx, quote.text, W / 2, y + 14, W - 100, 24);
-    y += 14 + quoteLines * 24;
+    // 增加 letter-spacing 效果：手动在每个字之间加空格
+    const spacedText = quote.text.split('').join(' ');
+    wrapText(ctx, spacedText, W / 2, y, W - 80, BASE * 1.625);
+    y += BASE * 0.75 + quoteLines * BASE * 1.625;
 
+    // 作者 - 破折号垂直对齐优化
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
+    ctx.textBaseline = 'middle';
     ctx.fillText(quote.author || '', W / 2, y);
-    y += 10;
+    ctx.textBaseline = 'alphabetic';
+    y += BASE;
   }
 
-  // 底部
-  y = H - 36;
-  drawInkLine(ctx, 60, y - 14, W - 60, y - 14);
+  // 底部 - 确保不被截断
+  y = H - BASE * 2.5;
+  drawInkLine(ctx, 60, y - BASE * 0.5, W - 60, y - BASE * 0.5);
 
   const now = new Date();
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -195,9 +227,22 @@ async function generateShareImage(huangli) {
 
   ctx.font = '13px "ZCOOL XiaoWei", sans-serif';
   ctx.fillStyle = '#8a7e6a';
-  ctx.fillText(solarStr, W / 2, y);
+  ctx.fillText(solarStr, W / 2, y + BASE * 0.5);
 
   return canvas.toDataURL('image/png');
+}
+
+// 绘制宜/忌条目 - 图标和文字基线对齐
+function drawYiJiItem(ctx, item, x, y) {
+  ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
+  ctx.fillStyle = '#1a1612';
+  ctx.textBaseline = 'middle'; // 使用 middle 基线让图标和文字垂直居中
+  
+  // 先测量文字高度
+  const text = `${item.icon}  ${item.title}`;
+  ctx.fillText(text, x, y);
+  
+  ctx.textBaseline = 'alphabetic'; // 恢复默认
 }
 
 function drawCardBg(ctx, x, y, w, h, bgColor) {
