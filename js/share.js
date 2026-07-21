@@ -37,20 +37,20 @@ async function generateShareImage(huangli) {
     quoteLines = countWrappedLines(ctx, quote.text, W - 100);
   }
 
-  // 基础间距单位 24px，所有间距都是它的倍数：标题间1x、区块间2x、大段间3x
-  const BASE = 24;
+  // 基础间距单位 28px，整体更宽松
+  const BASE = 28;
   // 根据实际行数计算一言区域高度
-  const quoteSectionHeight = quote ? (BASE * 1.5 + BASE * 0.75 + quoteLines * BASE * 0.875 + BASE * 0.75) : 0;
+  const quoteSectionHeight = quote ? (BASE * 1.5 + BASE * 0.75 + quoteLines * BASE * 0.95 + BASE * 0.8) : 0;
 
-  let H = BASE * 3.5; // 顶部留白增大（灯笼和文字间距）
-  H += BASE * 2.8;  // 标题区高度（灯笼+宜生活+农历+天气）
-  if (fortune) H += BASE * 4; // 运势区增大（解决中吉与今日运势重叠）
-  H += yiItems.length * BASE * 1.25 + BASE * 2.8; // 宜卡片（增加内边距）
-  H += jiItems.length * BASE * 1.25 + BASE * 2.8; // 忌卡片（增加内边距）
-  if (yiItems.length > 0 && jiItems.length > 0) H += BASE * 0.75; // 卡片间距
+  let H = BASE * 4;     // 顶部留白
+  H += BASE * 3.2;     // 标题区高度（灯笼+宜生活+农历+天气）
+  if (fortune) H += BASE * 5;   // 运势区（大幅增加）
+  H += yiItems.length * BASE * 1.3 + BASE * 3.2; // 宜卡片
+  H += jiItems.length * BASE * 1.3 + BASE * 3.2; // 忌卡片
+  if (yiItems.length > 0 && jiItems.length > 0) H += BASE; // 卡片间距
   if (quote) H += quoteSectionHeight;
-  H += BASE * 3; // 底部区域增大（解决一言和日期重叠）
-  H = Math.max(H, 650);
+  H += BASE * 4;    // 底部区域（大幅增加）
+  H = Math.max(H, 750);
 
   // 设置最终画布尺寸
   canvas.width = W * dpr;
@@ -83,34 +83,34 @@ async function generateShareImage(huangli) {
 
   ctx.textAlign = 'center';
 
-  // 顶部标题区 - 增大顶部留白
-  let y = BASE * 2.5;
+  // 顶部标题区 - 大幅增加顶部留白
+  let y = BASE * 3;
   
   // 灯笼 + 宜生活 横向排列
-  ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
+  ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#1a1612';
   const titleText = '宜生活';
   const titleWidth = ctx.measureText(titleText).width;
-  const lanternWidth = 28;
-  const totalWidth = lanternWidth + 8 + titleWidth;
+  const lanternWidth = 30;
+  const totalWidth = lanternWidth + 10 + titleWidth;
   const startX = (W - totalWidth) / 2;
   
   // 绘制灯笼
-  ctx.font = '24px sans-serif';
+  ctx.font = '26px sans-serif';
   ctx.textBaseline = 'middle';
   ctx.fillText('🏮', startX + lanternWidth/2, y);
   
   // 绘制标题
-  ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
+  ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(titleText, startX + lanternWidth + 8 + titleWidth/2, y + 4);
-    y += BASE * 1;   // 标题到农历间距增大
+  ctx.fillText(titleText, startX + lanternWidth + 10 + titleWidth/2, y + 5);
+  y += BASE * 1.3;   // 标题到农历 大幅拉开
 
   // 农历
-  ctx.font = '13px "Ma Shan Zheng", "STKaiti", serif';
+  ctx.font = '14px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#7a6e60';
   ctx.fillText(huangli.lunar || '', W / 2, y);
-  y += BASE * 0.7;
+  y += BASE * 0.85;
 
   // 天气信息（如果有）- 行间距缩小
   if (typeof currentWeather !== 'undefined' && currentWeather) {
@@ -122,117 +122,112 @@ async function generateShareImage(huangli) {
   }
 
   drawInkLine(ctx, 60, y, W - 60, y);
-  y += BASE * 1.25;
+  y += BASE * 1.5;
 
-  // 运势签 - 增大各层间距避免重叠
+  // 运势签 - 大幅拉开各层间距
   if (fortune) {
     // 今日运势（小标签）
-    ctx.font = '11px "ZCOOL XiaoWei", serif';
+    ctx.font = '12px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#4a4a4a';
     ctx.fillText('今日运势', W / 2, y);
-    y += BASE * 0.75; // 标签和运势间距增大 (18px)，避免重叠
+    y += BASE * 1;     // 标签到运势 大幅拉开 (28px)
 
     // 中吉（大结果）
-    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#9c1f17';
     ctx.fillText(fortune.grade, W / 2, y);
-    y += BASE * 1.6; // 运势和说明距离 (38px)
+    y += BASE * 1.8;    // 运势到说明 大幅拉开 (50px)
 
     // 说明文字
-    ctx.font = '12px "ZCOOL XiaoWei", serif';
+    ctx.font = '13px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#7a6e60';
     ctx.fillText(fortune.desc, W / 2, y);
-    y += BASE * 1.4;
+    y += BASE * 1.6;
 
     drawInkLine(ctx, 80, y, W - 80, y);
-    y += BASE;
+    y += BASE * 1.2;
   }
 
   // 宜
   if (yiItems.length > 0) {
-    // 固定卡片内边距和内容布局
-    const cardPaddingTop = 24;
-    const cardPaddingBottom = 20;
-    const headerHeight = 42;     // 宜字+印章区域高度
-    const itemHeight = 30;       // 每条内容固定高度（增大行高）
+    const cardPaddingTop = 28;
+    const cardPaddingBottom = 24;
+    const headerHeight = 48;
+    const itemHeight = 34;
     const cardHeight = cardPaddingTop + headerHeight + yiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(184, 50, 41, 0.05)');
 
-    // 宜字和印章 - 居中于头部区域
-    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
     ctx.textBaseline = 'middle';
     const yiY = y + cardPaddingTop + headerHeight / 2;
-    ctx.fillText('宜', W / 2 - 10, yiY);   // 宜字稍左偏，给印章留空间
-    drawSeal(ctx, W / 2 + 18, yiY - 4, 14, '吉');
+    ctx.fillText('宜', W / 2 - 12, yiY);
+    drawSeal(ctx, W / 2 + 20, yiY - 4, 15, '吉');
 
-    // 宜忌内容
     yiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 8 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 10 + i * itemHeight);
     });
-    y += cardHeight + 14;
+    y += cardHeight + 18;
   }
 
   // 忌
   if (jiItems.length > 0) {
-    // 固定卡片内边距和内容布局
-    const cardPaddingTop = 24;
-    const cardPaddingBottom = 20;
-    const headerHeight = 42;     // 忌字+印章区域高度
-    const itemHeight = 30;       // 每条内容固定高度（增大行高）
+    const cardPaddingTop = 28;
+    const cardPaddingBottom = 24;
+    const headerHeight = 48;
+    const itemHeight = 34;
     const cardHeight = cardPaddingTop + headerHeight + jiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(26, 22, 18, 0.03)');
 
-    // 忌字和印章 - 居中于头部区域
-    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
     ctx.textBaseline = 'middle';
     const jiY = y + cardPaddingTop + headerHeight / 2;
-    ctx.fillText('忌', W / 2 - 10, jiY);   // 忌字稍左偏，给印章留空间
-    drawSeal(ctx, W / 2 + 18, jiY - 4, 14, '慎');
+    ctx.fillText('忌', W / 2 - 12, jiY);
+    drawSeal(ctx, W / 2 + 20, jiY - 4, 15, '慎');
 
     jiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 8 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 10 + i * itemHeight);
     });
-    y += cardHeight + 14;
+    y += cardHeight + 18;
   }
 
   // 每日一言
   if (quote) {
     drawInkLine(ctx, 80, y, W - 80, y);
-    y += BASE;
+    y += BASE * 1.3;
 
-    ctx.font = '13px "ZCOOL XiaoWei", serif';
+    ctx.font = '14px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
     ctx.fillText('每日一言', W / 2, y);
-    y += BASE * 0.75;
+    y += BASE;
 
-    // 引用文 - 正常字距（取消手动加空格）
-    ctx.font = '17px "Long Cang", "STXingkai", cursive';
+    // 引用文
+    ctx.font = '18px "Long Cang", "STXingkai", cursive';
     ctx.fillStyle = '#4a3f35';
-    wrapText(ctx, quote.text, W / 2, y, W - 80, BASE * 0.875);
-    y += quoteLines * BASE * 0.875;
+    wrapText(ctx, quote.text, W / 2, y, W - 80, BASE * 0.95);
+    y += quoteLines * BASE * 0.95;
 
-    // 作者 - 使用 middle 中线对齐，让破折号和文字对齐
-    y += BASE * 0.5;
-    ctx.font = '11px "ZCOOL XiaoWei", serif';
+    // 作者
+    y += BASE * 0.6;
+    ctx.font = '12px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
     ctx.textBaseline = 'middle';
     ctx.fillText(quote.author || '', W / 2, y);
-    y += BASE * 0.75;
+    y += BASE;
   }
 
-  // 底部 - 确保不被截断
-  y = H - BASE * 3;
-  drawInkLine(ctx, 60, y - BASE * 0.5, W - 60, y - BASE * 0.5);
+  // 底部 - 大幅增加空间
+  y = H - BASE * 4;
+  drawInkLine(ctx, 60, y - BASE * 0.8, W - 60, y - BASE * 0.8);
 
   const now = new Date();
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const solarStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} 星期${weekdays[now.getDay()]}`;
 
-  ctx.font = '13px "ZCOOL XiaoWei", sans-serif';
+  ctx.font = '14px "ZCOOL XiaoWei", sans-serif';
   ctx.fillStyle = '#8a7e6a';
-  ctx.fillText(solarStr, W / 2, y + BASE * 0.5);
+  ctx.fillText(solarStr, W / 2, y + BASE * 0.8);
 
   return canvas.toDataURL('image/png');
 }
