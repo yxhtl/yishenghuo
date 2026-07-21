@@ -126,17 +126,17 @@ async function generateShareImage(huangli) {
 
   // 运势签 - 三层信息间距优化：标签+运势一组，说明另一组
   if (fortune) {
-    // 今日运势（小标签）- 颜色加深确保可见
+    // 今日运势（小标签）- 使用更深的颜色确保清晰可见
     ctx.font = '11px "ZCOOL XiaoWei", serif';
-    ctx.fillStyle = '#666666';
+    ctx.fillStyle = '#5a5a5a';
     ctx.fillText('今日运势', W / 2, y);
-    y += BASE * 0.5; // 标签和运势挨很近 (4px)
+    y += BASE * 0.5; // 标签和运势挨很近 (12px)
 
     // 中吉（大结果）
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#9c1f17';
     ctx.fillText(fortune.grade, W / 2, y);
-    y += BASE * 1.5; // 运势和说明拉开距离，形成分组 (16px)
+    y += BASE * 1.5; // 运势和说明拉开距离，形成分组 (36px)
 
     // 说明文字
     ctx.font = '12px "ZCOOL XiaoWei", serif';
@@ -150,26 +150,26 @@ async function generateShareImage(huangli) {
 
   // 宜
   if (yiItems.length > 0) {
-    // 固定卡片高度，不管内容多少
-    const cardPadding = 20;
-    const itemHeight = BASE * 1.25;
-    const cardHeight = cardPadding * 2 + BASE * 1.5 + yiItems.length * itemHeight;
+    // 固定卡片内边距和内容布局
+    const cardPaddingTop = 20;
+    const cardPaddingBottom = 16;
+    const itemHeight = 28; // 每条内容固定高度
+    const cardHeight = cardPaddingTop + 36 + yiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(184, 50, 41, 0.05)');
 
-    // 宜字和印章 - 统一对齐规则：印章中心与宜字中心对齐
+    // 宜字和印章
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
     ctx.textBaseline = 'alphabetic';
-    const yiY = y + cardPadding + BASE * 0.75;
+    const yiY = y + cardPaddingTop + 22;
     ctx.fillText('宜', W / 2, yiY);
-    // 印章中心与宜字中心对齐
     drawSeal(ctx, W / 2 + 28, yiY - 8, 14, '吉');
 
-    // 宜忌内容 - 图标和文字基线对齐
+    // 宜忌内容
     yiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPadding + BASE * 1.75 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 44 + i * itemHeight);
     });
-    y += cardHeight + BASE * 0.75;
+    y += cardHeight + 12;
   }
 
   // 宜/忌卡片间距
@@ -179,24 +179,24 @@ async function generateShareImage(huangli) {
 
   // 忌
   if (jiItems.length > 0) {
-    // 固定卡片高度，不管内容多少
-    const cardPadding = 20;
-    const itemHeight = BASE * 1.25;
-    const cardHeight = cardPadding * 2 + BASE * 1.5 + jiItems.length * itemHeight;
+    // 固定卡片内边距和内容布局
+    const cardPaddingTop = 20;
+    const cardPaddingBottom = 16;
+    const itemHeight = 28; // 每条内容固定高度
+    const cardHeight = cardPaddingTop + 36 + jiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(26, 22, 18, 0.03)');
 
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
     ctx.textBaseline = 'alphabetic';
-    const jiY = y + cardPadding + BASE * 0.75;
+    const jiY = y + cardPaddingTop + 22;
     ctx.fillText('忌', W / 2, jiY);
-    // 印章中心与忌字中心对齐（与宜用相同规则）
     drawSeal(ctx, W / 2 + 28, jiY - 8, 14, '慎');
 
     jiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPadding + BASE * 1.75 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 44 + i * itemHeight);
     });
-    y += cardHeight + BASE * 0.75;
+    y += cardHeight + 12;
   }
 
   // 每日一言
@@ -215,11 +215,11 @@ async function generateShareImage(huangli) {
     wrapText(ctx, quote.text, W / 2, y, W - 80, BASE * 0.875);
     y += quoteLines * BASE * 0.875;
 
-    // 作者 - 破折号和文字中线对齐
+    // 作者 - 使用 alphabetic 基线对齐
     y += BASE * 0.5;
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillText(quote.author || '', W / 2, y);
     y += BASE * 0.75;
   }
@@ -239,48 +239,35 @@ async function generateShareImage(huangli) {
   return canvas.toDataURL('image/png');
 }
 
-// 绘制宜/忌条目 - 图标和文字横向排列，基线对齐
-// 模拟 flex 布局：图标在左，文字在右，使用基线对齐
+// 绘制宜/忌条目 - 图标和文字横向排列，垂直居中
+// 图标在左，文字在右，整体居中对齐
 function drawYiJiItem(ctx, item, x, y) {
   const icon = item.icon;
   const title = item.title;
-  const gap = 6; // 图标和文字间距
+  const gap = 8; // 图标和文字间距
   
-  // 统一使用 alphabetic 基线对齐
-  ctx.textBaseline = 'alphabetic';
-  
-  // 设置文字字体用于测量
+  // 先测量文字
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
   ctx.fillStyle = '#1a1612';
   const titleWidth = ctx.measureText(title).width;
-  const titleMetrics = ctx.measureText(title);
-  const titleAscent = titleMetrics.actualBoundingBoxAscent || 11;
-  const titleDescent = titleMetrics.actualBoundingBoxDescent || 3;
-  const titleBaselineY = y;
   
-  // 测量 emoji 宽度
-  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  // 测量 emoji
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
   const iconWidth = ctx.measureText(icon).width;
-  const iconMetrics = ctx.measureText(icon);
-  const iconAscent = iconMetrics.actualBoundingBoxAscent || 12;
   
   // 计算总宽度和起始位置（居中对齐）
   const totalWidth = iconWidth + gap + titleWidth;
   const startX = x - totalWidth / 2;
   
-  // 计算基线偏移：让图标底部和文字底部对齐
-  // emoji 通常基线偏高，需要向下微调
-  const iconOffset = iconAscent - titleAscent + 2;
+  // 绘制 emoji - 使用 middle 垂直居中
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(icon, startX, y);
   
-  // 绘制 emoji（基线对齐，微调下移）
-  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(icon, startX, titleBaselineY + iconOffset);
-  
-  // 绘制文字（基线对齐）
+  // 绘制文字 - 使用 middle 垂直居中
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(title, startX + iconWidth + gap, titleBaselineY);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(title, startX + iconWidth + gap, y);
 }
 
 function drawCardBg(ctx, x, y, w, h, bgColor) {
