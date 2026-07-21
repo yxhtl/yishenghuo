@@ -45,8 +45,8 @@ async function generateShareImage(huangli) {
   let H = BASE * 3; // 顶部留白 3x
   H += BASE * 2.5;  // 标题区高度（灯笼+宜生活+农历+天气）
   if (fortune) H += BASE * 3.5; // 运势区（标签+运势+说明+间距）
-  H += yiItems.length * BASE * 1.25 + BASE * 2.5; // 宜卡片
-  H += jiItems.length * BASE * 1.25 + BASE * 2.5; // 忌卡片
+  H += yiItems.length * BASE * 1.25 + BASE * 2.8; // 宜卡片（增加内边距）
+  H += jiItems.length * BASE * 1.25 + BASE * 2.8; // 忌卡片（增加内边距）
   if (yiItems.length > 0 && jiItems.length > 0) H += BASE * 0.75; // 卡片间距
   if (quote) H += quoteSectionHeight;
   H += BASE * 2.5; // 底部区域
@@ -151,48 +151,50 @@ async function generateShareImage(huangli) {
   // 宜
   if (yiItems.length > 0) {
     // 固定卡片内边距和内容布局
-    const cardPaddingTop = 20;
-    const cardPaddingBottom = 16;
-    const itemHeight = 28; // 每条内容固定高度
-    const cardHeight = cardPaddingTop + 36 + yiItems.length * itemHeight + cardPaddingBottom;
+    const cardPaddingTop = 24;
+    const cardPaddingBottom = 20;
+    const headerHeight = 42;     // 宜字+印章区域高度
+    const itemHeight = 30;       // 每条内容固定高度（增大行高）
+    const cardHeight = cardPaddingTop + headerHeight + yiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(184, 50, 41, 0.05)');
 
-    // 宜字和印章 - 使用 middle 对齐保持一致
+    // 宜字和印章 - 居中于头部区域
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
     ctx.textBaseline = 'middle';
-    const yiY = y + cardPaddingTop + 18;
-    ctx.fillText('宜', W / 2, yiY);
-    drawSeal(ctx, W / 2 + 28, yiY - 4, 14, '吉');
+    const yiY = y + cardPaddingTop + headerHeight / 2;
+    ctx.fillText('宜', W / 2 - 10, yiY);   // 宜字稍左偏，给印章留空间
+    drawSeal(ctx, W / 2 + 18, yiY - 4, 14, '吉');
 
     // 宜忌内容
     yiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 40 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 8 + i * itemHeight);
     });
-    y += cardHeight + 12;
+    y += cardHeight + 14;
   }
 
   // 忌
   if (jiItems.length > 0) {
     // 固定卡片内边距和内容布局
-    const cardPaddingTop = 20;
-    const cardPaddingBottom = 16;
-    const itemHeight = 28; // 每条内容固定高度
-    const cardHeight = cardPaddingTop + 36 + jiItems.length * itemHeight + cardPaddingBottom;
+    const cardPaddingTop = 24;
+    const cardPaddingBottom = 20;
+    const headerHeight = 42;     // 忌字+印章区域高度
+    const itemHeight = 30;       // 每条内容固定高度（增大行高）
+    const cardHeight = cardPaddingTop + headerHeight + jiItems.length * itemHeight + cardPaddingBottom;
     drawCardBg(ctx, 28, y, W - 56, cardHeight, 'rgba(26, 22, 18, 0.03)');
 
-    // 忌字和印章 - 使用 middle 对齐保持一致
+    // 忌字和印章 - 居中于头部区域
     ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
     ctx.textBaseline = 'middle';
-    const jiY = y + cardPaddingTop + 18;
-    ctx.fillText('忌', W / 2, jiY);
-    drawSeal(ctx, W / 2 + 28, jiY - 4, 14, '慎');
+    const jiY = y + cardPaddingTop + headerHeight / 2;
+    ctx.fillText('忌', W / 2 - 10, jiY);   // 忌字稍左偏，给印章留空间
+    drawSeal(ctx, W / 2 + 18, jiY - 4, 14, '慎');
 
     jiItems.forEach((item, i) => {
-      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + 40 + i * itemHeight);
+      drawYiJiItem(ctx, item, W / 2, y + cardPaddingTop + headerHeight + 8 + i * itemHeight);
     });
-    y += cardHeight + 12;
+    y += cardHeight + 14;
   }
 
   // 每日一言
@@ -236,37 +238,38 @@ async function generateShareImage(huangli) {
 }
 
 // 绘制宜/忌条目 - 图标和文字横向排列
-// 图标在左，文字在右，整体居中对齐，基线对齐
+// 图标在左，文字在右，整体居中对齐，使用 middle 垂直居中
 function drawYiJiItem(ctx, item, x, y) {
   const icon = item.icon;
   const title = item.title;
   const gap = 6; // 图标和文字间距
   
-  // 统一使用 alphabetic 基线
-  ctx.textBaseline = 'alphabetic';
+  // 使用 middle 垂直对齐，确保图标和文字视觉中心一致
+  ctx.textBaseline = 'middle';
   
-  // 测量文字
+  // 先测量文字
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
   ctx.fillStyle = '#1a1612';
   const titleWidth = ctx.measureText(title).width;
   
   // 测量 emoji（使用相同字体大小）
-  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
   const iconWidth = ctx.measureText(icon).width;
   
   // 计算总宽度和起始位置（居中对齐）
   const totalWidth = iconWidth + gap + titleWidth;
   const startX = x - totalWidth / 2;
   
-  // 绘制 emoji - 基线对齐，微调下移让视觉对齐
-  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(icon, startX, y + 3);
+  // 绘制图标 - middle 对齐，垂直居中
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(icon, startX + iconWidth / 2, y);
   
-  // 绘制文字 - 基线对齐
+  // 绘制文字 - middle 对齐，垂直居中
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(title, startX + iconWidth + gap, y);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1a1612';
+  ctx.fillText(title, startX + iconWidth + gap + titleWidth / 2, y);
 }
 
 function drawCardBg(ctx, x, y, w, h, bgColor) {
