@@ -7,6 +7,7 @@ async function generateShareImage(huangli) {
   // 等待自定义字体加载完成，但设置 3 秒超时避免无限等待
   try {
     const fontLoadPromise = Promise.all([
+      document.fonts.load('bold 24px "Ma Shan Zheng"'),
       document.fonts.load('bold 26px "Ma Shan Zheng"'),
       document.fonts.load('bold 30px "Ma Shan Zheng"'),
       document.fonts.load('14px "ZCOOL XiaoWei"'),
@@ -42,11 +43,11 @@ async function generateShareImage(huangli) {
 
   let H = 80;
   H += 70;
-  if (fortune) H += 70;
+  if (fortune) H += 64;
   H += yiItems.length * 32 + 50;
   H += jiItems.length * 32 + 50;
   if (quote) H += quoteSectionHeight;
-  H += 60;
+  H += 50;
   H = Math.max(H, 480);
 
   // 设置最终画布尺寸
@@ -78,14 +79,6 @@ async function generateShareImage(huangli) {
   ctx.fillStyle = botGrad;
   ctx.fillRect(0, H - 120, W, 120);
 
-  // 随机墨点
-  ctx.fillStyle = 'rgba(30, 20, 10, 0.06)';
-  [[20, H * 0.2], [W - 30, H * 0.35], [40, H * 0.6], [W - 50, H * 0.75]].forEach(([x, y]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, 3 + Math.random() * 2, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
   ctx.textAlign = 'center';
 
   // 顶部标题
@@ -94,7 +87,7 @@ async function generateShareImage(huangli) {
   ctx.fillText('🏮', W / 2, y);
   y += 24;
 
-  ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
+  ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
   ctx.fillStyle = '#1a1612';
   ctx.fillText('宜 生 活', W / 2, y);
   y += 22;
@@ -118,22 +111,20 @@ async function generateShareImage(huangli) {
 
   // 运势签
   if (fortune) {
-    ctx.font = '12px "ZCOOL XiaoWei", serif';
-    ctx.fillStyle = '#a89c8a';
+    ctx.font = '11px "ZCOOL XiaoWei", serif';
+    ctx.fillStyle = '#bfb3a1';
     ctx.fillText('今日运势', W / 2, y);
-    y += 22;
+    y += 24;
 
-    ctx.font = 'bold 30px "Ma Shan Zheng", "STKaiti", serif';
-    ctx.fillStyle = '#b83229';
+    ctx.font = 'bold 24px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.fillStyle = '#9c1f17';
     ctx.fillText(fortune.grade, W / 2, y);
-    y += 18;
-
-    drawSeal(ctx, W / 2 + 40, y - 20, 18, '吉');
+    y += 16;
 
     ctx.font = '12px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#7a6e60';
-    ctx.fillText(fortune.desc, W / 2, y + 16);
-    y += 36;
+    ctx.fillText(fortune.desc, W / 2, y + 14);
+    y += 34;
 
     drawInkLine(ctx, 80, y, W - 80, y);
     y += 20;
@@ -143,10 +134,10 @@ async function generateShareImage(huangli) {
   if (yiItems.length > 0) {
     drawCardBg(ctx, 28, y, W - 56, yiItems.length * 32 + 40, 'rgba(184, 50, 41, 0.05)');
 
-    ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#b83229';
     ctx.fillText('宜', W / 2, y + 30);
-    drawSeal(ctx, W / 2 + 30, y + 8, 16, '吉');
+    drawSeal(ctx, W / 2 + 28, y + 16, 14, '吉');
 
     ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
     ctx.fillStyle = '#1a1612';
@@ -160,10 +151,10 @@ async function generateShareImage(huangli) {
   if (jiItems.length > 0) {
     drawCardBg(ctx, 28, y, W - 56, jiItems.length * 32 + 40, 'rgba(26, 22, 18, 0.03)');
 
-    ctx.font = 'bold 28px "Ma Shan Zheng", "STKaiti", serif';
+    ctx.font = 'bold 26px "Ma Shan Zheng", "STKaiti", serif';
     ctx.fillStyle = '#1a1612';
     ctx.fillText('忌', W / 2, y + 30);
-    drawSeal(ctx, W / 2 + 30, y + 8, 16, '慎');
+    drawSeal(ctx, W / 2 + 28, y + 16, 14, '慎');
 
     ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
     ctx.fillStyle = '#1a1612';
@@ -195,20 +186,16 @@ async function generateShareImage(huangli) {
   }
 
   // 底部
-  y = H - 40;
-  drawInkLine(ctx, 60, y - 16, W - 60, y - 16);
+  y = H - 36;
+  drawInkLine(ctx, 60, y - 14, W - 60, y - 14);
 
   const now = new Date();
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const solarStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} 星期${weekdays[now.getDay()]}`;
 
-  ctx.font = '11px "ZCOOL XiaoWei", sans-serif';
-  ctx.fillStyle = '#a89c8a';
+  ctx.font = '13px "ZCOOL XiaoWei", sans-serif';
+  ctx.fillStyle = '#8a7e6a';
   ctx.fillText(solarStr, W / 2, y);
-
-  ctx.font = '10px "ZCOOL XiaoWei", sans-serif';
-  ctx.fillStyle = '#c0b4a2';
-  ctx.fillText('长按保存 · 查看你的今日黄历', W / 2, y + 16);
 
   return canvas.toDataURL('image/png');
 }

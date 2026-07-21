@@ -483,11 +483,6 @@ body::before {
   margin-left: auto;
 }
 
-.weather-bar::after {
-  content: '';
-  display: none;
-}
-
 /* ===== 运势签卡片 ===== */
 .fortune-card {
   margin: 0 20px 16px;
@@ -706,7 +701,6 @@ body::before {
 }
 
 .card-status {
-  font-size: 13px;
   color: var(--color-ink-faint);
   margin-top: 10px;
   font-family: var(--font-cursive);
@@ -1379,3 +1373,41 @@ body::before {
   font-family: var(--font-serif);
 }
 .history-detail-status.done { color: var(--color-seal); }
+
+/* ===== 历史列表项 ===== */
+.history-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.history-list-item:active {
+  background: var(--bg-paper-dark);
+}
+.history-list-item:last-child {
+  border-bottom: none;
+}
+
+.history-list-date {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.history-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-list-mood {
+  font-size: 16px;
+}
+
+.history-list-arrow {
+  color: var(--color-ink-faint);
+  font-size: 16px;
+}

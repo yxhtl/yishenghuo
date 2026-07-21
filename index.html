@@ -24,7 +24,7 @@
   <!-- 系统已有 STKaiti/STXingkai 等手写体作为首选，这个只是增强 -->
   <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
   <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
-  <script src="js/lib/lunar.js"></script>
+  <script src="js/lib/lunar.js" defer></script>
 </head>
 <body>
 
@@ -97,9 +97,9 @@
   <!-- ========== 主页 ========== -->
   <div id="view-home" class="view" style="display:none;">
     <header class="home-header">
-      <button class="header-btn" onclick="goSettings()">☰</button>
+      <button class="header-btn" onclick="goSettings()" aria-label="设置">☰</button>
       <span class="header-title">宜生活</span>
-      <button class="header-btn" onclick="refreshHuangli()">↻</button>
+      <button class="header-btn" onclick="refreshHuangli()" aria-label="刷新黄历">↻</button>
     </header>
 
     <!-- 日期 + 节气 -->
@@ -197,7 +197,7 @@
   <!-- ========== 设置页 ========== -->
   <div id="view-settings" class="view" style="display:none;">
     <header class="home-header">
-      <button class="header-btn" onclick="goHome()">←</button>
+      <button class="header-btn" onclick="goHome()" aria-label="返回首页">←</button>
       <span class="header-title">设置</span>
       <span class="header-btn"></span>
     </header>
@@ -224,6 +224,15 @@
       </div>
 
       <div class="settings-section">
+        <div class="settings-section-title">天气定位</div>
+        <div class="settings-card">
+          <p class="settings-desc">天气需要获取你的位置。如果你之前拒绝了定位授权，可以重新允许精确定位。</p>
+          <button class="btn-text" id="geo-reset-btn" onclick="resetGeoPermission()" style="display:none;">[ 重新允许精确定位 ]</button>
+          <p class="settings-desc" id="geo-status-tip">定位状态正常</p>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-section-title">我的数据</div>
         <div class="settings-card">
           <p class="settings-desc">导出你的档案和历史记录到本地文件，换设备或清理浏览器时可导入恢复</p>
@@ -242,10 +251,10 @@
   </div>
 
   <!-- ========== 编辑档案弹窗 ========== -->
-  <div id="modal-edit" class="modal" style="display:none;">
-    <div class="modal-overlay" onclick="closeModal()"></div>
+  <div id="modal-edit" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+    <div class="modal-overlay" onclick="closeModal()" aria-hidden="true"></div>
     <div class="modal-content">
-      <h3>编辑生活档案</h3>
+      <h3 id="modal-edit-title">编辑生活档案</h3>
       <label class="modal-label">在意的事（逗号分隔）</label>
       <input type="text" id="edit-goals" class="text-input" placeholder="健康, 家人关系">
       <label class="modal-label">作息类型</label>
@@ -260,32 +269,34 @@
   </div>
 
   <!-- ========== 分享图片预览 ========== -->
-  <div id="modal-share" class="modal" style="display:none;">
-    <div class="modal-overlay" onclick="closeShareModal()"></div>
+  <div id="modal-share" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-share-title">
+    <div class="modal-overlay" onclick="closeShareModal()" aria-hidden="true"></div>
     <div class="modal-content modal-share-content">
-      <h3>分享我的今日黄历</h3>
+      <h3 id="modal-share-title">分享我的今日黄历</h3>
       <div id="share-preview" class="share-preview"></div>
-      <p class="share-tip">长按图片保存，或截图分享到朋友圈</p>
+      <p class="share-tip">长按图片可保存到相册，或点击下方按钮下载</p>
       <div class="modal-btns">
         <button class="btn-text" onclick="closeShareModal()">关闭</button>
+        <button class="btn-primary" id="share-download-btn" onclick="downloadShareImage()" style="display:none;">保存图片</button>
       </div>
     </div>
   </div>
 
   <!-- ========== 历史详情弹窗 ========== -->
-  <div id="modal-history" class="modal" style="display:none;">
-    <div class="modal-overlay" onclick="closeHistoryModal()"></div>
+  <div id="modal-history" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-history-title">
+    <div class="modal-overlay" onclick="closeHistoryModal()" aria-hidden="true"></div>
     <div class="modal-content">
-      <h3>历史黄历</h3>
+      <h3 id="modal-history-title">历史黄历</h3>
       <div id="history-detail" class="history-detail"></div>
       <div class="modal-btns">
+        <button class="btn-text" id="history-back-btn" onclick="showFullHistory()" style="display:none;">← 返回列表</button>
         <button class="btn-text" onclick="closeHistoryModal()">关闭</button>
       </div>
     </div>
   </div>
 
   <!-- ========== Toast 提示 ========== -->
-  <div id="toast" class="toast" style="display:none;"></div>
+  <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
 
   <script src="js/storage.js"></script>
   <script src="js/weather.js"></script>

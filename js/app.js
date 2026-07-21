@@ -229,6 +229,7 @@ async function finishOnboarding() {
 
 /* ===== 主页 ===== */
 async function loadHome() {
+  autoApplyFreeze();
   const todayKey = getTodayKey();
   let huangli = getHuangliByDate(todayKey);
 
@@ -545,9 +546,15 @@ function showHistoryDetail(dateKey) {
   const huangli = getHuangliByDate(dateKey);
   const mood = getMood(dateKey);
   const container = document.getElementById('history-detail');
+  const titleEl = document.getElementById('modal-history-title');
+  const backBtn = document.getElementById('history-back-btn');
 
   const d = new Date(dateKey);
   const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`;
+
+  // 显示返回按钮（从列表进入详情时）
+  if (backBtn) backBtn.style.display = 'inline-block';
+  if (titleEl) titleEl.textContent = dateStr + ' · 历史黄历';
 
   if (!huangli) {
     container.innerHTML = `
@@ -590,15 +597,52 @@ function showHistoryDetail(dateKey) {
   }
 
   document.getElementById('modal-history').style.display = 'flex';
+  trapModalFocus(document.getElementById('modal-history'));
 }
 
 function closeHistoryModal() {
-  document.getElementById('modal-history').style.display = 'none';
+  const modal = document.getElementById('modal-history');
+  modal.style.display = 'none';
+  releaseModalFocus(modal);
 }
 
 function showFullHistory() {
-  // 直接展示今天的历史详情
-  showHistoryDetail(getTodayKey());
+  const days = getAllHistoryDays();
+  const container = document.getElementById('history-detail');
+  const titleEl = document.getElementById('modal-history-title');
+  const backBtn = document.getElementById('history-back-btn');
+
+  if (titleEl) titleEl.textContent = '历史黄历';
+  if (backBtn) backBtn.style.display = 'none';
+
+  if (days.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📜</div>
+        <div class="empty-state-text">还没有历史记录<br>每天使用宜生活会自动记录</div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = days.map(day => {
+      const dotClass = day.hasDone ? 'done' : 'none';
+      const moodEmoji = day.mood ? getMoodEmoji(day.mood) : '';
+      const d = day.date;
+      const dateLabel = `${d.getMonth() + 1}月${d.getDate()}日 星期${day.weekday}`;
+
+      return `
+        <div class="history-list-item" onclick="showHistoryDetail('${day.key}')">
+          <span class="history-list-date">${dateLabel}${day.isToday ? ' · 今天' : ''}</span>
+          <span class="history-list-meta">
+            <span class="history-day-dot ${dotClass}"></span>
+            ${moodEmoji ? `<span class="history-list-mood">${moodEmoji}</span>` : ''}
+            <span class="history-list-arrow">›</span>
+          </span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('modal-history').style.display = 'flex';
 }
 
 /* ===== 每周回顾 ===== */
@@ -758,6 +802,18 @@ function renderSettings() {
       </div>
     </div>
   `;
+
+  // 天气定位状态
+  const geoResetBtn = document.getElementById('geo-reset-btn');
+  const geoStatusTip = document.getElementById('geo-status-tip');
+  const geoDenied = localStorage.getItem('yishenghuo_geo_denied') === '1';
+  if (geoDenied) {
+    if (geoResetBtn) geoResetBtn.style.display = 'inline-block';
+    if (geoStatusTip) geoStatusTip.textContent = '当前使用 IP 定位（精度到城市级）';
+  } else {
+    if (geoResetBtn) geoResetBtn.style.display = 'none';
+    if (geoStatusTip) geoStatusTip.textContent = '定位状态正常';
+  }
 }
 
 function editProfile() {
@@ -768,6 +824,7 @@ function editProfile() {
     document.getElementById('edit-reminders').value = profile.customReminders || '';
   }
   document.getElementById('modal-edit').style.display = 'flex';
+  trapModalFocus(document.getElementById('modal-edit'));
 }
 
 function saveProfile() {
@@ -795,10 +852,14 @@ function saveProfile() {
 }
 
 function closeModal() {
-  document.getElementById('modal-edit').style.display = 'none';
+  const modal = document.getElementById('modal-edit');
+  modal.style.display = 'none';
+  releaseModalFocus(modal);
 }
 
 /* ===== 分享 ===== */
+let currentShareDataUrl = null;
+
 async function shareHuangli() {
   const todayKey = getTodayKey();
   const huangli = getHuangliByDate(todayKey);
@@ -809,14 +870,41 @@ async function shareHuangli() {
   }
 
   document.getElementById('modal-share').style.display = 'flex';
+  trapModalFocus(document.getElementById('modal-share'));
   document.getElementById('share-preview').innerHTML = '<p class="settings-desc">生成中…</p>';
+  const downloadBtn = document.getElementById('share-download-btn');
+  if (downloadBtn) downloadBtn.style.display = 'none';
 
   const dataUrl = await generateShareImage(huangli);
+  currentShareDataUrl = dataUrl;
   document.getElementById('share-preview').innerHTML = `<img src="${dataUrl}" alt="今日黄历">`;
+  if (downloadBtn) downloadBtn.style.display = 'inline-block';
+}
+
+function downloadShareImage() {
+  if (!currentShareDataUrl) return;
+  const a = document.createElement('a');
+  a.href = currentShareDataUrl;
+  a.download = `yishenghuo-${getTodayKey()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('图片已保存 📁');
 }
 
 function closeShareModal() {
-  document.getElementById('modal-share').style.display = 'none';
+  const modal = document.getElementById('modal-share');
+  modal.style.display = 'none';
+  releaseModalFocus(modal);
+}
+
+/* ===== 天气定位重置 ===== */
+function resetGeoPermission() {
+  localStorage.removeItem('yishenghuo_geo_denied');
+  // 清除天气缓存，让下次访问重新获取
+  localStorage.removeItem('yishenghuo_weather');
+  showToast('已重置定位授权，下次打开将重新请求');
+  renderSettings();
 }
 
 /* ===== PWA 安装 ===== */
@@ -923,4 +1011,73 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/* ===== 无障碍：Modal 焦点陷阱 ===== */
+let _lastFocusedElement = null;
+
+function trapModalFocus(modalEl) {
+  if (!modalEl) return;
+  _lastFocusedElement = document.activeElement;
+
+  const focusableSelector = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
+  const focusables = modalEl.querySelectorAll(focusableSelector);
+  if (focusables.length === 0) return;
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  first.focus();
+
+  modalEl._trapHandler = function(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+  modalEl._escapeHandler = function(e) {
+    if (e.key === 'Escape') {
+      const overlay = modalEl.querySelector('.modal-overlay');
+      if (overlay) overlay.click();
+    }
+  };
+  modalEl.addEventListener('keydown', modalEl._trapHandler);
+  document.addEventListener('keydown', modalEl._escapeHandler);
+}
+
+function releaseModalFocus(modalEl) {
+  if (!modalEl) return;
+  if (modalEl._trapHandler) {
+    modalEl.removeEventListener('keydown', modalEl._trapHandler);
+    modalEl._trapHandler = null;
+  }
+  if (modalEl._escapeHandler) {
+    document.removeEventListener('keydown', modalEl._escapeHandler);
+    modalEl._escapeHandler = null;
+  }
+  if (_lastFocusedElement) {
+    _lastFocusedElement.focus();
+    _lastFocusedElement = null;
+  }
+}
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.style.display = 'flex';
+  trapModalFocus(modal);
+}
+
+function closeModalById(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.style.display = 'none';
+  releaseModalFocus(modal);
 }

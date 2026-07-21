@@ -6,6 +6,7 @@
 
 const WEATHER_CACHE_KEY = 'yishenghuo_weather';
 const WEATHER_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 小时缓存（天气会变，不宜太长）
+const GEO_DENIED_KEY = 'yishenghuo_geo_denied';
 
 /* WMO 天气代码 → 中文描述 + emoji */
 const WMO_CODE_MAP = {
@@ -79,11 +80,14 @@ function cacheWeather(data) {
 
 /**
  * 获取用户地理位置（优先浏览器 API，失败则用服务端 IP 定位）
+ * 用户拒绝浏览器定位后不再重复弹窗，直接走 IP 定位
  * @returns {Promise<{lat, lon, city}|null>}
  */
 async function getUserLocation() {
   // 方案 1：浏览器地理定位（精确，但需用户授权）
-  if ('geolocation' in navigator) {
+  // 用户曾拒绝过则跳过，不再弹窗
+  const geoDenied = localStorage.getItem(GEO_DENIED_KEY) === '1';
+  if (!geoDenied && 'geolocation' in navigator) {
     try {
       const pos = await getGeoPosition(5000); // 5 秒超时
       if (pos) {
@@ -91,7 +95,13 @@ async function getUserLocation() {
         return { lat: pos.lat, lon: pos.lon, city: city || '当前位置' };
       }
     } catch (e) {
-      console.info('[宜生活] 浏览器定位失败，尝试 IP 定位:', e.message);
+      // 用户拒绝授权（code=1）则记录，不再弹窗
+      if (e.message && e.message.includes('Geo error: 1')) {
+        localStorage.setItem(GEO_DENIED_KEY, '1');
+        console.info('[宜生活] 用户拒绝定位授权，后续将使用 IP 定位');
+      } else {
+        console.info('[宜生活] 浏览器定位失败，尝试 IP 定位:', e.message);
+      }
     }
   }
 

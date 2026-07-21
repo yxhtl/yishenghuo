@@ -16,23 +16,29 @@ const STORAGE_KEY = 'yishenghuo_data';
  * }
  */
 
+let _dataCache = null;
+
 function getData() {
+  if (_dataCache) return _dataCache;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
-    return {
+    _dataCache = {
       profile: data.profile || null,
       huangli: data.huangli || {},
       moods: data.moods || {},
       checkins: data.checkins || {},
       streakFreeze: data.streakFreeze || {}
     };
+    return _dataCache;
   } catch {
-    return { profile: null, huangli: {}, moods: {}, checkins: {}, streakFreeze: {} };
+    _dataCache = { profile: null, huangli: {}, moods: {}, checkins: {}, streakFreeze: {} };
+    return _dataCache;
   }
 }
 
 function saveData(data) {
+  _dataCache = data;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -132,37 +138,71 @@ function tryUseFreeze(dateKey) {
   return true;
 }
 
+/**
+ * 自动应用断签保护（页面加载时调用一次）
+ * 为今天之前的中断天数自动使用免死，每段中断最多用一次
+ */
+function autoApplyFreeze() {
+  const data = getData();
+  const checkins = data.checkins || {};
+  const today = new Date();
+  let changed = false;
+  let gapFreezeUsed = false;
+
+  for (let i = 1; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = getDateKey(d);
+    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+    // 遇到打卡记录，开启新的中断段
+    if (checkins[key]) {
+      gapFreezeUsed = false;
+      continue;
+    }
+
+    // 缺失天：检查是否已冻结
+    const freezes = data.streakFreeze[yearMonth] || [];
+    if (freezes.includes(key)) continue;
+
+    // 当前中断段还没用过免死，尝试冻结
+    if (!gapFreezeUsed) {
+      if (freezes.length < FREEZE_PER_MONTH) {
+        if (!data.streakFreeze[yearMonth]) data.streakFreeze[yearMonth] = [];
+        data.streakFreeze[yearMonth].push(key);
+        changed = true;
+      }
+      gapFreezeUsed = true;
+    }
+  }
+
+  if (changed) saveData(data);
+}
+
+/**
+ * 获取连续打卡天数（只读，不修改数据）
+ */
 function getStreak() {
   const data = getData();
   const checkins = data.checkins || {};
   const streakFreeze = data.streakFreeze || {};
   let streak = 0;
   const today = new Date();
-  let freezeUsed = false;
 
-  // 从今天往回数连续天数
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = getDateKey(d);
     const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const freezes = streakFreeze[yearMonth] || [];
 
     if (checkins[key]) {
       streak++;
-    } else if (i > 0) {
-      // 没打卡，尝试用免死
-      const freezes = streakFreeze[yearMonth] || [];
-      const freezeAvailable = freezes.length < FREEZE_PER_MONTH;
-      const alreadyFrozen = freezes.includes(key);
-
-      if (freezeAvailable && !alreadyFrozen && !freezeUsed) {
-        // 使用一次免死，不中断 streak
-        tryUseFreeze(key);
-        streak++;
-        freezeUsed = true;
-      } else {
-        break;
-      }
+    } else if (i > 0 && freezes.includes(key)) {
+      // 已冻结的日期算作连续
+      streak++;
+    } else {
+      break;
     }
   }
   return streak;
@@ -281,9 +321,46 @@ function getRecentContextForAI(days = 3) {
   return lines.length > 0 ? lines.join('\n') : null;
 }
 
+/* ===== 全部历史日期（用于历史列表）===== */
+
+/**
+ * 获取所有有黄历记录的日期，按日期倒序排列
+ * @returns {Array<{key, date, day, weekday, hasDone, mood}>}
+ */
+function getAllHistoryDays() {
+  const data = getData();
+  const today = new Date();
+  const todayKey = getDateKey(today);
+  const days = [];
+
+  const sortedKeys = Object.keys(data.huangli).sort().reverse();
+
+  for (const key of sortedKeys) {
+    const h = data.huangli[key];
+    if (!h || !h.items) continue;
+
+    const d = new Date(key);
+    const mood = data.moods[key];
+    let hasDone = h.items.some(item => item.status === 'done');
+
+    days.push({
+      key,
+      date: d,
+      day: d.getDate(),
+      weekday: ['日','一','二','三','四','五','六'][d.getDay()],
+      hasDone,
+      mood: mood ? mood.mood : null,
+      isToday: key === todayKey
+    });
+  }
+
+  return days;
+}
+
 /* ===== 重置 ===== */
 
 function resetAllData() {
+  _dataCache = null;
   localStorage.removeItem(STORAGE_KEY);
 }
 

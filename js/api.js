@@ -9,14 +9,6 @@ const CLIENT_DAILY_LIMIT = 5; // 每天最多主动请求 5 次
 const RATE_LIMIT_KEY = 'yishenghuo_api_count';
 
 /**
- * 获取今天的日期 key（如 "2026-07-19"）
- */
-function getTodayKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-/**
  * 检查今天还能否调用 API
  * @returns {{ allowed: boolean, used: number, remaining: number }}
  */
@@ -287,7 +279,7 @@ const YI_POOL = {
       '与其列20个to-do，不如只挑3个最重要的。',
       '今天的目标不用多，完成3件就够了。'
     ]},
-    { icon: '🔇', title: '关掉通知专注30分钟', reasons: [
+    { icon: '🤫', title: '关掉通知专注30分钟', reasons: [
       '你说想提升效率，但手机一直在打断你。',
       '试一次"勿扰模式"，你会发现30分钟能做很多事。',
       '把微信静音30分钟，天不会塌。'
@@ -341,7 +333,7 @@ const YI_POOL = {
       '今天别听歌当背景音，认真听一首完整的。',
       '戴上耳机，把世界关在外面5分钟。'
     ]},
-    { icon: '📝', title: '写下现在的感受', reasons: [
+    { icon: '📓', title: '写下现在的感受', reasons: [
       '你选了"关注情绪"，但情绪需要被看见才能被管理。',
       '不用写日记那么正式，几个词也行，写下来就好。',
       '此刻什么感受？写下来，你会更了解自己。'
@@ -444,17 +436,18 @@ const JI_POOL = {
     ]}
   ],
   '饮食': [
-    { icon: '🧋', title: '喝奶茶', reasons: [
-      '你提醒过自己少喝奶茶，今天就忍一下？',
-      '一杯奶茶的糖分超出你一天的量，今天换成水吧。',
-      '你说要少喝奶茶，但路过奶茶店又心动了？忍住。'
+    { icon: '🥤', title: '贪凉饮冷', reasons: [
+      '你提醒过自己少喝冷饮，今天就忍一下吧。',
+      '冰饮虽爽，但肠胃不喜欢，今天换成温的吧。',
+      '你说要少喝奶茶，但路过冷饮店又心动了？忍住。',
+      '贪凉容易伤胃，今天喝点温热的。'
     ]},
-    { icon: '🍔', title: '吃夜宵', reasons: [
+    { icon: '🍔', title: '深夜进食', reasons: [
       '你关注健康，但夜宵是健康的隐形杀手。',
       '晚上10点以后吃东西，身体要加班消化。',
       '今天如果饿了，喝杯热牛奶比夜宵好多了。'
     ]},
-    { icon: '🌶️', title: '吃太辣', reasons: [
+    { icon: '🌶️', title: '过食辛辣', reasons: [
       '你今天已经吃过辣的了，再来一顿胃会抗议。',
       '嘴上痛快，但明天上厕所的时候你就后悔了。'
     ]}
@@ -471,7 +464,7 @@ const JI_POOL = {
       '讨好别人委屈自己，不划算。',
       '你的时间和精力有限，今天留点给自己。'
     ]},
-    { icon: '📉', title: '和别人比较', reasons: [
+    { icon: '😰', title: '和别人比较', reasons: [
       '别人的朋友圈都是精修过的，别拿来比。',
       '你关注情绪状态，但比较是焦虑的最大来源。',
       '今天的你只需要比昨天的你好一点就够了。',
@@ -519,21 +512,21 @@ function getMockHuangli(profile) {
   // 自定义提醒关键词匹配
   const reminderLower = reminders.toLowerCase();
   if ((reminderLower.includes('奶茶') || reminderLower.includes('饮料')) && JI_POOL['饮食']) {
-    jiPool.push(JI_POOL['饮食'][0]); // 喝奶茶
+    jiPool.push(JI_POOL['饮食'][0]); // 贪凉饮冷
   }
   if (reminderLower.includes('熬夜') && JI_POOL['熬夜']) {
     jiPool.push(JI_POOL['熬夜'][0]); // 睡前刷手机
   }
   if (reminderLower.includes('辣') && JI_POOL['饮食']) {
-    jiPool.push(JI_POOL['饮食'][2]); // 吃太辣
+    jiPool.push(JI_POOL['饮食'][2]); // 过食辛辣
   }
   if (reminderLower.includes('夜宵') && JI_POOL['饮食']) {
-    jiPool.push(JI_POOL['饮食'][1]); // 吃夜宵
+    jiPool.push(JI_POOL['饮食'][1]); // 深夜进食
   }
   if (reminderLower.includes('拖延') && JI_POOL['通用忌']) {
     jiPool.push(JI_POOL['通用忌'][0]); // 拖延
   }
-  if (reminderLower.includes('内耗') || reminderLower.includes('比较') && JI_POOL['情绪']) {
+  if ((reminderLower.includes('内耗') || reminderLower.includes('比较')) && JI_POOL['情绪']) {
     jiPool.push(JI_POOL['情绪'][1]); // 过度内耗
   }
 
