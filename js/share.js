@@ -126,9 +126,9 @@ async function generateShareImage(huangli) {
 
   // 运势签 - 三层信息间距优化：标签+运势一组，说明另一组
   if (fortune) {
-    // 今日运势（小标签）- 使用更深的颜色确保清晰可见
+    // 今日运势（小标签）- 使用深色确保清晰可见
     ctx.font = '11px "ZCOOL XiaoWei", serif';
-    ctx.fillStyle = '#5a5a5a';
+    ctx.fillStyle = '#4a4a4a';
     ctx.fillText('今日运势', W / 2, y);
     y += BASE * 0.5; // 标签和运势挨很近 (12px)
 
@@ -211,11 +211,11 @@ async function generateShareImage(huangli) {
     wrapText(ctx, quote.text, W / 2, y, W - 80, BASE * 0.875);
     y += quoteLines * BASE * 0.875;
 
-    // 作者 - 使用 alphabetic 基线对齐
+    // 作者 - 使用 middle 中线对齐，让破折号和文字对齐
     y += BASE * 0.5;
     ctx.font = '11px "ZCOOL XiaoWei", serif';
     ctx.fillStyle = '#a89c8a';
-    ctx.textBaseline = 'alphabetic';
+    ctx.textBaseline = 'middle';
     ctx.fillText(quote.author || '', W / 2, y);
     y += BASE * 0.75;
   }
@@ -235,34 +235,37 @@ async function generateShareImage(huangli) {
   return canvas.toDataURL('image/png');
 }
 
-// 绘制宜/忌条目 - 图标和文字横向排列，垂直居中
-// 图标在左，文字在右，整体居中对齐
+// 绘制宜/忌条目 - 图标和文字横向排列
+// 图标在左，文字在右，整体居中对齐，基线对齐
 function drawYiJiItem(ctx, item, x, y) {
   const icon = item.icon;
   const title = item.title;
-  const gap = 8; // 图标和文字间距
+  const gap = 6; // 图标和文字间距
   
-  // 先测量文字
+  // 统一使用 alphabetic 基线
+  ctx.textBaseline = 'alphabetic';
+  
+  // 测量文字
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
   ctx.fillStyle = '#1a1612';
   const titleWidth = ctx.measureText(title).width;
   
-  // 测量 emoji
-  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  // 测量 emoji（使用相同字体大小）
+  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
   const iconWidth = ctx.measureText(icon).width;
   
   // 计算总宽度和起始位置（居中对齐）
   const totalWidth = iconWidth + gap + titleWidth;
   const startX = x - totalWidth / 2;
   
-  // 绘制 emoji - 使用 middle 垂直居中
-  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(icon, startX, y);
+  // 绘制 emoji - 基线对齐，微调下移让视觉对齐
+  ctx.font = '15px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(icon, startX, y + 3);
   
-  // 绘制文字 - 使用 middle 垂直居中
+  // 绘制文字 - 基线对齐
   ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillText(title, startX + iconWidth + gap, y);
 }
 
