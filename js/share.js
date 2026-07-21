@@ -128,7 +128,7 @@ async function generateShareImage(huangli) {
   if (fortune) {
     // 今日运势（小标签）
     ctx.font = '11px "ZCOOL XiaoWei", serif';
-    ctx.fillStyle = '#bfb3a1';
+    ctx.fillStyle = '#8a7e6a';
     ctx.fillText('今日运势', W / 2, y);
     y += BASE * 0.75; // 标签和运势挨很近
 
@@ -231,31 +231,35 @@ async function generateShareImage(huangli) {
   return canvas.toDataURL('image/png');
 }
 
-// 绘制宜/忌条目 - 图标和文字基线对齐
-// emoji 和文字的基线不同，需要分开绘制并手动对齐
+// 绘制宜/忌条目 - 图标和文字横向排列（图标在左，文字在右）
 function drawYiJiItem(ctx, item, x, y) {
   const icon = item.icon;
   const title = item.title;
   const gap = 8; // 图标和文字间距
   
-  // 设置文字字体用于测量
-  ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
+  // 设置文字字体用于测量文字宽度
+  ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
   ctx.fillStyle = '#1a1612';
-  
-  // 测量文字宽度
   const titleWidth = ctx.measureText(title).width;
-  const totalWidth = 18 + gap + titleWidth; // emoji 约 18px 宽
+  
+  // 设置 emoji 字体并测量宽度
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textBaseline = 'middle';
+  const iconWidth = ctx.measureText(icon).width;
+  
+  // 计算总宽度和起始位置（居中对齐）
+  const totalWidth = iconWidth + gap + titleWidth;
   const startX = x - totalWidth / 2;
   
-  // 绘制 emoji - 使用 alphabetic 基线并手动调整位置
-  // emoji 的基线比文字高，需要向下偏移
-  ctx.font = '15px sans-serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(icon, startX, y + 2); // +2 让 emoji 基线和文字对齐
+  // 绘制 emoji（垂直居中）
+  ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(icon, startX, y);
   
-  // 绘制文字
-  ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", sans-serif';
-  ctx.fillText(title, startX + 18 + gap, y);
+  // 绘制文字（垂直居中）
+  ctx.font = '15px "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(title, startX + iconWidth + gap, y);
 }
 
 function drawCardBg(ctx, x, y, w, h, bgColor) {
@@ -314,6 +318,17 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     }
   }
   if (line) lines.push(line);
+
+  // 避免最后一行只有一个字，尝试从上一行借字
+  if (lines.length >= 2) {
+    const lastLine = lines[lines.length - 1];
+    const prevLine = lines[lines.length - 2];
+    if (lastLine.length === 1 && prevLine.length > 1) {
+      // 从上一行最后一个字借到最后一行
+      lines[lines.length - 2] = prevLine.slice(0, -1);
+      lines[lines.length - 1] = prevLine.slice(-1) + lastLine;
+    }
+  }
 
   lines.forEach((l, i) => {
     ctx.fillText(l, x, y + i * lineHeight);
